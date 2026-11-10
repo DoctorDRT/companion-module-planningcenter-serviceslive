@@ -329,6 +329,7 @@ module.exports = {
 					.takeControl(serviceTypeId, planId)
 					.then(function (result) {
 						self.updateStatus(InstanceStatus.Ok)
+						self.setControlledPlan(serviceTypeId, planId)
 					})
 					.catch(function (message) {
 						self.log('error', message)
@@ -372,12 +373,14 @@ module.exports = {
 					type: 'textinput',
 					label: 'PCO Service Type Id',
 					id: 'servicetypeid',
+					useVariables: true,
 					tooltip: 'PCO Service Type Id to control.',
 				},
 				{
 					type: 'textinput',
 					label: 'PCO Plan Id',
 					id: 'planid',
+					useVariables: true,
 					tooltip: 'PCO Plan Id to control.',
 				},
 			],
@@ -389,6 +392,7 @@ module.exports = {
 					.takeControl(serviceTypeId, planId)
 					.then(function (result) {
 						self.updateStatus(InstanceStatus.Ok)
+						self.setControlledPlan(serviceTypeId, planId)
 					})
 					.catch(function (message) {
 						self.log('error', message)
@@ -404,12 +408,14 @@ module.exports = {
 					type: 'textinput',
 					label: 'PCO Service Type Id',
 					id: 'servicetypeid',
+					useVariables: true,
 					tooltip: 'PCO Service Type Id to control.',
 				},
 				{
 					type: 'textinput',
 					label: 'PCO Plan Id',
 					id: 'planid',
+					useVariables: true,
 					tooltip: 'PCO Plan Id to control.',
 				},
 			],
@@ -447,13 +453,11 @@ module.exports = {
 				self
 					.getPlanIdOfServiceType(serviceTypeId)
 					.then(function (planId) {
-						self.lastPlanId = planId
-						self.startInterval()
-
 						self
 							.takeControl(serviceTypeId, planId)
 							.then(function (result) {
 								self.updateStatus(InstanceStatus.Ok)
+								self.setControlledPlan(serviceTypeId, planId)
 							})
 							.catch(function (message) {
 								self.log('error', 'Error taking control: ' + message)
@@ -539,12 +543,34 @@ module.exports = {
 					type: 'textinput',
 					label: 'PCO Plan Id',
 					id: 'planid',
+					useVariables: true,
 					tooltip: 'PCO Plan Id to use.',
+				},
+				{
+					type: 'textinput',
+					label: 'PCO Service Type Id (optional)',
+					id: 'servicetypeid',
+					default: '',
+					useVariables: true,
+					tooltip:
+						'Needed when the plan is not one of the plans loaded when the connection started (for example a plan further in the future).',
 				},
 			],
 			callback: async function (event) {
 				let planId = await self.parseVariablesInString(event.options.planid)
-				let serviceTypeId = self.getServiceIdFromPlanId(planId)
+				let serviceTypeId = event.options.servicetypeid
+					? await self.parseVariablesInString(event.options.servicetypeid)
+					: ''
+				if (!serviceTypeId) {
+					serviceTypeId = self.getServiceIdFromPlanId(planId)
+				}
+				if (!serviceTypeId) {
+					self.log(
+						'error',
+						`Plan ${planId} was not found in the loaded plans. Fill in the Service Type Id option for this action.`,
+					)
+					return
+				}
 
 				self.lastServiceTypeId = serviceTypeId
 				self.lastPlanId = planId
