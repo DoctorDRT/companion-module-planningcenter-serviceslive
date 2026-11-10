@@ -62,6 +62,15 @@ module.exports = {
 				default: 4,
 			},
 			{
+				type: 'number',
+				id: 'picker_servicetype_slots',
+				label: 'Plan Picker: number of service type slots (1-30). Default is 8.',
+				width: 3,
+				min: 1,
+				max: 30,
+				default: 8,
+			},
+			{
 				type: 'static-text',
 				id: 'info',
 				width: 12,

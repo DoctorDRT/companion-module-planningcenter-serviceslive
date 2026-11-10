@@ -125,6 +125,11 @@ class PCOLiveInstance extends InstanceBase {
 
 		this.initPCOLive()
 
+		//fill the plan picker's service type slots from the folder (the one already loaded, or the Parent Folder setting)
+		if ((this.picker.folderId || this.config.parentfolder) && this.config.applicationid && this.config.secretkey) {
+			this.loadPickerServiceTypes(this.picker.folderId)
+		}
+
 		//if the plan picker already had a service type loaded, reload it with the new settings
 		if (this.picker.serviceTypeId) {
 			this.loadPickerPlans(this.picker.serviceTypeId, true)

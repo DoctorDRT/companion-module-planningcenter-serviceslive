@@ -5,14 +5,18 @@ const baseAPIUrl = 'https://api.planningcenteronline.com/services/v2'
 const PICKER_DEFAULT_SLOTS = 4
 const PICKER_MAX_SLOTS = 10
 const PICKER_REFRESH_MS = 5 * 60 * 1000 //reload the upcoming plans list every 5 minutes
+const PICKER_DEFAULT_SERVICETYPE_SLOTS = 8
+const PICKER_MAX_SERVICETYPE_SLOTS = 30
 
 /*
  * Plan Picker
  *
  * Lets an operator choose a service type, see the next few upcoming plans for it as variables,
  * pick one, and then take control of that plan. Flow on a Stream Deck:
- *   1. "Plan Picker: Load Upcoming Plans" (one button per service type)
- *   2. "Plan Picker: Select Plan" (one button per slot, text = $(services-live:picker_plan_1_dates) etc.)
+ *   0. (optional) "Plan Picker: Load Service Types from Folder" fills picker_servicetype_N_name variables
+ *   1. "Plan Picker: Select Service Type" (one button per service type slot) or
+ *      "Plan Picker: Load Upcoming Plans" (a fixed service type per button)
+ *   2. "Plan Picker: Select Plan" (one button per slot, text = $(services-live:picker_plan_1_name) etc.)
  *   3. "Plan Picker: Take Control of Selected Plan"
  */
 module.exports = {
@@ -24,8 +28,20 @@ module.exports = {
 		return Math.min(slots, PICKER_MAX_SLOTS)
 	},
 
+	getPickerServiceTypeSlotCount: function () {
+		let slots = parseInt(this.config?.picker_servicetype_slots)
+		if (isNaN(slots) || slots < 1) {
+			slots = PICKER_DEFAULT_SERVICETYPE_SLOTS
+		}
+		return Math.min(slots, PICKER_MAX_SERVICETYPE_SLOTS)
+	},
+
 	initPickerState: function () {
 		this.picker = {
+			folderId: '',
+			folderName: '',
+			serviceTypes: [], //[{ id, name }] - the service types loaded from a folder, in PCO's order
+			serviceTypesLoading: false,
 			serviceTypeId: '',
 			serviceTypeName: '',
 			plans: [], //[{ id, dates, shortDates, title, seriesTitle, times }]
@@ -78,7 +94,12 @@ module.exports = {
 
 		self.picker.serviceTypeId = serviceTypeId
 		let serviceObj = self.currentState.internal.services.find((s) => s.id === serviceTypeId)
-		self.picker.serviceTypeName = serviceObj ? serviceObj.attributes.name : ''
+		let pickerServiceType = self.picker.serviceTypes.find((s) => s.id === serviceTypeId)
+		self.picker.serviceTypeName = serviceObj
+			? serviceObj.attributes.name
+			: pickerServiceType
+				? pickerServiceType.name
+				: ''
 		self.picker.loading = true
 		self.checkVariables()
 		self.checkFeedbacks()
@@ -234,6 +255,97 @@ module.exports = {
 		)
 	},
 
+	/*
+	 * Loads the service types in a PCO folder into the picker's service type slots.
+	 * With no folder id, uses the connection's Parent Folder setting, or every service type if that is blank too.
+	 */
+	loadPickerServiceTypes: function (folderId) {
+		let self = this
+
+		folderId = `${folderId || ''}`.trim() || `${self.config?.parentfolder || ''}`.trim()
+
+		let url = `${baseAPIUrl}/service_types?order=sequence&per_page=100`
+		if (folderId) {
+			url += `&where[parent_id]=${encodeURIComponent(folderId)}`
+		}
+
+		self.picker.folderId = folderId
+		self.picker.folderName = folderId ? self.picker.folderName : ''
+		self.picker.serviceTypesLoading = true
+		self.checkVariables()
+
+		let folderPromise = Promise.resolve(null)
+		if (folderId) {
+			folderPromise = self
+				.doRest('GET', `${baseAPIUrl}/folders/${encodeURIComponent(folderId)}`, {})
+				.then((result) => (result.data && result.data.attributes ? result.data.attributes.name : ''))
+				.catch(() => '') //the folder name is just a nice-to-have
+		}
+
+		return Promise.all([self.doRest('GET', url, {}), folderPromise])
+			.then(function ([result, folderName]) {
+				if (self.picker.folderId !== folderId) {
+					return //a different folder was requested while this one was loading
+				}
+
+				let data = Array.isArray(result.data) ? result.data : result.data ? [result.data] : []
+				self.picker.serviceTypes = data.map((st) => ({ id: st.id, name: st.attributes.name || '' }))
+				self.picker.folderName = folderName || ''
+				self.picker.serviceTypesLoading = false
+
+				if (self.picker.serviceTypes.length > self.getPickerServiceTypeSlotCount()) {
+					self.log(
+						'info',
+						`Plan Picker: folder has ${self.picker.serviceTypes.length} service types, but only ${self.getPickerServiceTypeSlotCount()} service type slots are set in the connection config.`,
+					)
+				}
+
+				self.checkVariables()
+				self.checkFeedbacks()
+			})
+			.catch(function (message) {
+				self.picker.serviceTypesLoading = false
+				self.log('error', 'Plan Picker: error loading service types: ' + message)
+				self.updateStatus(InstanceStatus.ConnectionFailure, message)
+				self.checkVariables()
+				self.checkFeedbacks()
+			})
+	},
+
+	/* 1-based slot of the selected service type in the loaded service types, 0 when it isn't one of them */
+	getPickerSelectedServiceTypeSlot: function () {
+		if (!this.picker.serviceTypeId) {
+			return 0
+		}
+		return this.picker.serviceTypes.findIndex((st) => st.id === this.picker.serviceTypeId) + 1
+	},
+
+	selectPickerServiceTypeSlot: function (slot) {
+		let serviceType = this.picker.serviceTypes[slot - 1]
+		if (!serviceType) {
+			this.log('debug', `Plan Picker: service type slot ${slot} is empty.`)
+			return
+		}
+		this.picker.serviceTypeName = serviceType.name
+		this.loadPickerPlans(serviceType.id, this.picker.serviceTypeId === serviceType.id)
+	},
+
+	stepPickerServiceType: function (step) {
+		let count = this.picker.serviceTypes.length
+		if (count === 0) {
+			return
+		}
+		let current = this.getPickerSelectedServiceTypeSlot()
+		let next = current === 0 ? 1 : current + step
+		next = Math.max(1, Math.min(count, next))
+		this.selectPickerServiceTypeSlot(next)
+	},
+
+	/* A plan's display name: its title if it has one, otherwise its series title (blank if it has neither) */
+	getPickerPlanName: function (plan) {
+		return plan ? plan.title || plan.seriesTitle || '' : ''
+	},
+
 	clearPicker: function () {
 		this.stopPickerRefresh()
 		this.initPickerState()
@@ -262,7 +374,12 @@ module.exports = {
 		let variables = [
 			{ variableId: 'picker_servicetype_id', name: 'Plan Picker: Service Type Id' },
 			{ variableId: 'picker_servicetype_name', name: 'Plan Picker: Service Type Name' },
+			{ variableId: 'picker_folder_id', name: 'Plan Picker: Folder Id' },
+			{ variableId: 'picker_folder_name', name: 'Plan Picker: Folder Name' },
+			{ variableId: 'picker_servicetype_count', name: 'Plan Picker: Number of Service Types Loaded' },
+			{ variableId: 'picker_selected_servicetype_slot', name: 'Plan Picker: Selected Service Type Slot Number' },
 			{ variableId: 'picker_plan_count', name: 'Plan Picker: Number of Upcoming Plans Loaded' },
+			{ variableId: 'picker_selected_plan_name', name: 'Plan Picker: Selected Plan Name' },
 			{ variableId: 'picker_selected_slot', name: 'Plan Picker: Selected Slot Number' },
 			{ variableId: 'picker_selected_plan_id', name: 'Plan Picker: Selected Plan Id' },
 			{ variableId: 'picker_selected_plan_dates', name: 'Plan Picker: Selected Plan Dates' },
@@ -271,8 +388,14 @@ module.exports = {
 			{ variableId: 'picker_selected_plan_times', name: 'Plan Picker: Selected Plan Service Times' },
 		]
 
+		for (let i = 1; i <= this.getPickerServiceTypeSlotCount(); i++) {
+			variables.push({ variableId: `picker_servicetype_${i}_id`, name: `Plan Picker: Service Type ${i} Id` })
+			variables.push({ variableId: `picker_servicetype_${i}_name`, name: `Plan Picker: Service Type ${i} Name` })
+		}
+
 		for (let i = 1; i <= this.getPickerSlotCount(); i++) {
 			variables.push({ variableId: `picker_plan_${i}_id`, name: `Plan Picker: Plan ${i} Id` })
+			variables.push({ variableId: `picker_plan_${i}_name`, name: `Plan Picker: Plan ${i} Name` })
 			variables.push({ variableId: `picker_plan_${i}_dates`, name: `Plan Picker: Plan ${i} Dates` })
 			variables.push({ variableId: `picker_plan_${i}_short_dates`, name: `Plan Picker: Plan ${i} Short Dates` })
 			variables.push({ variableId: `picker_plan_${i}_title`, name: `Plan Picker: Plan ${i} Title` })
@@ -290,7 +413,12 @@ module.exports = {
 
 		values.picker_servicetype_id = picker.serviceTypeId
 		values.picker_servicetype_name = picker.serviceTypeName
+		values.picker_folder_id = picker.folderId
+		values.picker_folder_name = picker.folderName
+		values.picker_servicetype_count = picker.serviceTypesLoading ? 'Loading...' : picker.serviceTypes.length
+		values.picker_selected_servicetype_slot = this.getPickerSelectedServiceTypeSlot()
 		values.picker_plan_count = picker.loading ? 'Loading...' : picker.plans.length
+		values.picker_selected_plan_name = this.getPickerPlanName(selected)
 		values.picker_selected_slot = this.getPickerSelectedSlot()
 		values.picker_selected_plan_id = selected ? selected.id : ''
 		values.picker_selected_plan_dates = selected ? selected.dates : ''
@@ -298,9 +426,16 @@ module.exports = {
 		values.picker_selected_plan_title = selected ? selected.title : ''
 		values.picker_selected_plan_times = selected ? selected.times : ''
 
+		for (let i = 1; i <= this.getPickerServiceTypeSlotCount(); i++) {
+			let serviceType = picker.serviceTypes[i - 1]
+			values[`picker_servicetype_${i}_id`] = serviceType ? serviceType.id : ''
+			values[`picker_servicetype_${i}_name`] = serviceType ? serviceType.name : ''
+		}
+
 		for (let i = 1; i <= this.getPickerSlotCount(); i++) {
 			let plan = picker.plans[i - 1]
 			values[`picker_plan_${i}_id`] = plan ? plan.id : ''
+			values[`picker_plan_${i}_name`] = this.getPickerPlanName(plan)
 			values[`picker_plan_${i}_dates`] = plan ? plan.dates : ''
 			values[`picker_plan_${i}_short_dates`] = plan ? plan.shortDates : ''
 			values[`picker_plan_${i}_title`] = plan ? plan.title : ''

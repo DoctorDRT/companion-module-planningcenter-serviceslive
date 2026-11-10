@@ -648,6 +648,68 @@ module.exports = {
 			pickerSlotChoices.push({ id: i, label: `Plan ${i}` })
 		}
 
+		let pickerServiceTypeSlotChoices = []
+		for (let i = 1; i <= self.getPickerServiceTypeSlotCount(); i++) {
+			pickerServiceTypeSlotChoices.push({ id: i, label: `Service Type ${i}` })
+		}
+
+		actions.picker_load_servicetypes = {
+			name: 'Plan Picker: Load Service Types from Folder',
+			description:
+				'Loads the service types in a PCO folder into the picker_servicetype_N variables, in the same order as PCO. Leave the folder blank to use the Parent Folder from the connection settings (or all service types).',
+			options: [
+				{
+					type: 'textinput',
+					label: 'PCO Folder Id',
+					id: 'folderid',
+					default: '',
+					useVariables: true,
+					tooltip: 'The folder id is in the URL when you open the folder in PCO Services.',
+				},
+			],
+			callback: async function (event) {
+				let folderId = await self.parseVariablesInString(`${event.options.folderid || ''}`)
+				self.loadPickerServiceTypes(folderId)
+			},
+		}
+
+		actions.picker_select_servicetype = {
+			name: 'Plan Picker: Select Service Type',
+			description:
+				'Selects one of the service types loaded from the folder and loads its upcoming plans (Service Type 1 is the first in the folder).',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Service Type Slot',
+					id: 'slot',
+					default: 1,
+					choices: pickerServiceTypeSlotChoices,
+				},
+			],
+			callback: async function (event) {
+				self.selectPickerServiceTypeSlot(parseInt(event.options.slot))
+			},
+		}
+
+		actions.picker_step_servicetype = {
+			name: 'Plan Picker: Select Next/Previous Service Type',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Direction',
+					id: 'direction',
+					default: 'next',
+					choices: [
+						{ id: 'next', label: 'Next' },
+						{ id: 'previous', label: 'Previous' },
+					],
+				},
+			],
+			callback: async function (event) {
+				self.stepPickerServiceType(event.options.direction === 'previous' ? -1 : 1)
+			},
+		}
+
 		actions.picker_load_plans = {
 			name: 'Plan Picker: Load Upcoming Plans for Service Type',
 			description:

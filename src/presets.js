@@ -701,13 +701,64 @@ module.exports = {
 			}
 		}
 
+		presets.picker_load_servicetypes = {
+			type: 'button',
+			category: pickerCategory,
+			name: 'Load Service Types from Folder',
+			style: {
+				text: 'LOAD\\n$(services-live:picker_folder_name)',
+				size: 'auto',
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(0, 0, 0),
+			},
+			steps: [
+				{
+					down: [{ actionId: 'picker_load_servicetypes', options: { folderid: '' } }],
+					up: [],
+				},
+			],
+			feedbacks: [],
+		}
+
+		for (let i = 1; i <= self.getPickerServiceTypeSlotCount(); i++) {
+			presets[`picker_servicetype_slot_${i}`] = {
+				type: 'button',
+				category: pickerCategory,
+				name: `Select Service Type ${i}`,
+				style: {
+					text: `$(services-live:picker_servicetype_${i}_name)`,
+					size: 'auto',
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(0, 0, 0),
+				},
+				steps: [
+					{
+						down: [{ actionId: 'picker_select_servicetype', options: { slot: i } }],
+						up: [],
+					},
+				],
+				feedbacks: [
+					{
+						feedbackId: 'picker_servicetype_slot_empty',
+						options: { slot: i },
+						style: { color: combineRgb(80, 80, 80), bgcolor: combineRgb(0, 0, 0) },
+					},
+					{
+						feedbackId: 'picker_servicetype_slot_selected',
+						options: { slot: i },
+						style: { color: combineRgb(0, 0, 0), bgcolor: pickerAmber },
+					},
+				],
+			}
+		}
+
 		for (let i = 1; i <= self.getPickerSlotCount(); i++) {
 			presets[`picker_plan_${i}`] = {
 				type: 'button',
 				category: pickerCategory,
 				name: `Select Plan ${i}`,
 				style: {
-					text: `$(services-live:picker_plan_${i}_short_dates)\\n$(services-live:picker_plan_${i}_title)`,
+					text: `$(services-live:picker_plan_${i}_short_dates)\\n$(services-live:picker_plan_${i}_name)`,
 					size: 'auto',
 					color: combineRgb(255, 255, 255),
 					bgcolor: combineRgb(0, 0, 0),
