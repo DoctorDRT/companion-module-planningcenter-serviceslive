@@ -1,8 +1,9 @@
 const { InstanceStatus } = require('@companion-module/base')
 
-const Client = require('node-rest-client').Client
-
 const baseAPIUrl = 'https://api.planningcenteronline.com/services/v2'
+
+const REST_TIMEOUT_MS = 15 * 1000
+const REST_MAX_RETRIES = 2 //retries after a 429 rate limit response
 
 const { Jimp } = require('jimp')
 
@@ -210,89 +211,66 @@ module.exports = {
 		}
 	},
 
-	doRest: function (method, url, body) {
+	/*
+	 * Calls the PCO API with the instance credentials using Node's built-in fetch.
+	 * Resolves with the parsed JSON (or {} for an empty body), rejects with a message string.
+	 * Requests time out after 15 seconds, and a rate-limited (429) request is retried after the Retry-After delay.
+	 */
+	doRest: async function (method, url, body) {
 		let self = this
 
-		return new Promise(function (resolve, reject) {
-			function handleResponse(err, result) {
-				if (
-					err === null &&
-					typeof result === 'object' &&
-					(result.response.statusCode === 200 || result.response.statusCode === 201)
-				) {
-					// A successful response
+		if (!self.config.applicationid || !self.config.secretkey) {
+			throw 'Invalid Application ID/Secret Key.'
+		}
 
-					let objJson = {}
+		if (method !== 'GET' && method !== 'POST') {
+			throw 'Invalid method'
+		}
 
-					if (result.data.length > 0) {
-						try {
-							objJson = JSON.parse(result.data.toString())
-						} catch (error) {
-							reject('Unable to parse JSON.')
-						}
-					}
+		const auth = Buffer.from(`${self.config.applicationid}:${self.config.secretkey}`).toString('base64')
+		const headers = { Authorization: `Basic ${auth}`, Accept: 'application/json' }
 
-					resolve(objJson)
-				} else {
-					// Failure. Reject the promise.
-					let message = 'Unknown error'
+		let options = { method: method, headers: headers }
+		if (method === 'POST' && body && Object.keys(body).length > 0) {
+			headers['Content-Type'] = 'application/json'
+			options.body = JSON.stringify(body)
+		}
 
-					if (result !== undefined) {
-						if (result.response !== undefined) {
-							message = result.response.statusCode + ': ' + result.response.statusMessage
-						} else if (result.error !== undefined) {
-							// Get the error message from the object if present.
-							message = result.error.code + ': ' + result.error.message
-						}
-					}
-
-					reject(message)
+		for (let attempt = 0; attempt <= REST_MAX_RETRIES; attempt++) {
+			let response
+			try {
+				response = await fetch(url, { ...options, signal: AbortSignal.timeout(REST_TIMEOUT_MS) })
+			} catch (error) {
+				if (error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
+					throw `Request timed out after ${REST_TIMEOUT_MS / 1000} seconds.`
 				}
+				let cause = error && error.cause ? error.cause : error
+				throw `${cause && cause.code ? cause.code : 'Error'}: ${cause && cause.message ? cause.message : error}`
 			}
 
-			if (self.config.applicationid === '' || self.config.secretkey === '') {
-				reject('Invalid Application ID/Secret Key.')
-			} else {
-				let options_auth = {
-					user: self.config.applicationid,
-					password: self.config.secretkey,
-				}
-
-				let args = {}
-
-				if (body) {
-					args = {
-						data: body,
-					}
-				}
-
-				let client = new Client(options_auth)
-
-				switch (method) {
-					case 'POST':
-						client
-							.post(url, function (data, response) {
-								handleResponse(null, { data: data, response: response })
-							})
-							.on('error', function (error) {
-								handleResponse(true, { error: error })
-							})
-						break
-					case 'GET':
-						client
-							.get(url, function (data, response) {
-								handleResponse(null, { data: data, response: response })
-							})
-							.on('error', function (error) {
-								handleResponse(true, { error: error })
-							})
-						break
-					default:
-						throw new Error('Invalid method')
-						break
-				}
+			if (response.status === 429 && attempt < REST_MAX_RETRIES) {
+				//rate limited, wait for as long as PCO asks (default a few seconds) and try again
+				let retryAfter = parseInt(response.headers.get('retry-after'))
+				let waitMs = (isNaN(retryAfter) ? 5 : Math.min(retryAfter, 30)) * 1000
+				self.log('warn', `PCO rate limit reached, retrying in ${waitMs / 1000} seconds...`)
+				await new Promise((resolve) => setTimeout(resolve, waitMs))
+				continue
 			}
-		})
+
+			if (!response.ok) {
+				throw `${response.status}: ${response.statusText}`
+			}
+
+			let text = await response.text()
+			if (text.length === 0) {
+				return {}
+			}
+			try {
+				return JSON.parse(text)
+			} catch (error) {
+				throw 'Unable to parse JSON.'
+			}
+		}
 	},
 
 	/* Takes control of the PCO plan which is needed before the plan can be changed. Rejects with a message on failure. */
