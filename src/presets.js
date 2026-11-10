@@ -47,7 +47,8 @@ export default {
 			category: 'Current Item',
 			name: 'Item Number in Plan (Item 3 of 12)',
 			style: {
-				text: `'Item: ' + (${v('plan_index')} ? ${v('plan_index')} : '#') + ' of ' + (${v('plan_length')} ? ${v('plan_length')} : '#')`,
+				//concat(), because + adds numbers in Companion expressions instead of joining text
+				text: `concat('Item: ', ${v('plan_index')} ? ${v('plan_index')} : '#', ' of ', ${v('plan_length')} ? ${v('plan_length')} : '#')`,
 				textExpression: true,
 				size: 'auto',
 				color: white,

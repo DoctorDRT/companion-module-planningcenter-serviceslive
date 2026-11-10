@@ -222,7 +222,7 @@ export function getLayeredPresets(self) {
 			text(
 				'count',
 				'Service Type Count',
-				expr(`${v('picker_servicetype_count')} + ' service types'`),
+				expr(`concat(${v('picker_servicetype_count')}, ' service types')`),
 				{ x: 4, y: 74, width: 92, height: 18 },
 				{ color: COLORS.muted },
 			),
@@ -511,7 +511,8 @@ export function getLayeredPresets(self) {
 			text(
 				'value',
 				'Item Number',
-				expr(`(${index} ? ${index} : '#') + ' of ' + (${total} ? ${total} : '#')`),
+				//concat(), because + adds numbers in Companion expressions instead of joining text
+				expr(`concat(${index} ? ${index} : '#', ' of ', ${total} ? ${total} : '#')`),
 				{ x: 4, y: 28, width: 92, height: 46 },
 				{ weight: 'bold', color: colorWhenSet('plan_index') },
 			),
