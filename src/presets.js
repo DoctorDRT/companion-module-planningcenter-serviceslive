@@ -665,6 +665,123 @@ module.exports = {
 			}
 		}
 
+		/* Plan Picker presets */
+		const pickerCategory = 'Plan Picker'
+		const pickerAmber = combineRgb(255, 191, 0)
+		const pickerGreen = combineRgb(0, 153, 51)
+
+		for (let i = 0; i < self.currentState.internal.services_list.length; i++) {
+			let service = self.currentState.internal.services_list[i]
+			if (!service.id) {
+				continue
+			}
+			presets[`picker_servicetype_${service.id}`] = {
+				type: 'button',
+				category: pickerCategory,
+				name: `Load ${service.label}`,
+				style: {
+					text: service.label,
+					size: 'auto',
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(0, 0, 0),
+				},
+				steps: [
+					{
+						down: [{ actionId: 'picker_load_plans', options: { servicetypeid: service.id } }],
+						up: [],
+					},
+				],
+				feedbacks: [
+					{
+						feedbackId: 'picker_servicetype_loaded',
+						options: { servicetypeid: service.id },
+						style: { color: combineRgb(0, 0, 0), bgcolor: pickerAmber },
+					},
+				],
+			}
+		}
+
+		for (let i = 1; i <= self.getPickerSlotCount(); i++) {
+			presets[`picker_plan_${i}`] = {
+				type: 'button',
+				category: pickerCategory,
+				name: `Select Plan ${i}`,
+				style: {
+					text: `$(services-live:picker_plan_${i}_short_dates)\\n$(services-live:picker_plan_${i}_title)`,
+					size: 'auto',
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(0, 0, 0),
+				},
+				steps: [
+					{
+						down: [{ actionId: 'picker_select_plan', options: { slot: i } }],
+						up: [],
+					},
+				],
+				feedbacks: [
+					{
+						feedbackId: 'picker_slot_empty',
+						options: { slot: i },
+						style: { color: combineRgb(80, 80, 80), bgcolor: combineRgb(0, 0, 0) },
+					},
+					{
+						feedbackId: 'picker_plan_selected',
+						options: { slot: i },
+						style: { color: combineRgb(0, 0, 0), bgcolor: pickerAmber },
+					},
+					{
+						feedbackId: 'picker_plan_controlled',
+						options: { slot: i },
+						style: { color: combineRgb(255, 255, 255), bgcolor: pickerGreen },
+					},
+				],
+			}
+		}
+
+		presets.picker_take_control = {
+			type: 'button',
+			category: pickerCategory,
+			name: 'Take Control of Selected Plan',
+			style: {
+				text: 'TAKE CONTROL\\n$(services-live:picker_selected_plan_short_dates)',
+				size: 'auto',
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(102, 0, 0),
+			},
+			steps: [
+				{
+					down: [{ actionId: 'picker_take_control', options: {} }],
+					up: [],
+				},
+			],
+			feedbacks: [
+				{
+					feedbackId: 'picker_plan_controlled',
+					options: { slot: 0 },
+					style: { color: combineRgb(255, 255, 255), bgcolor: pickerGreen },
+				},
+			],
+		}
+
+		presets.picker_release_control = {
+			type: 'button',
+			category: pickerCategory,
+			name: 'Release Control of Selected Plan',
+			style: {
+				text: 'RELEASE\\n$(services-live:picker_selected_plan_short_dates)',
+				size: 'auto',
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(0, 0, 0),
+			},
+			steps: [
+				{
+					down: [{ actionId: 'picker_release_control', options: {} }],
+					up: [],
+				},
+			],
+			feedbacks: [],
+		}
+
 		this.setPresetDefinitions(presets)
 	},
 }

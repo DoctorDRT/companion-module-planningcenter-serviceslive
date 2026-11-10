@@ -372,12 +372,14 @@ module.exports = {
 					type: 'textinput',
 					label: 'PCO Service Type Id',
 					id: 'servicetypeid',
+					useVariables: true,
 					tooltip: 'PCO Service Type Id to control.',
 				},
 				{
 					type: 'textinput',
 					label: 'PCO Plan Id',
 					id: 'planid',
+					useVariables: true,
 					tooltip: 'PCO Plan Id to control.',
 				},
 			],
@@ -404,12 +406,14 @@ module.exports = {
 					type: 'textinput',
 					label: 'PCO Service Type Id',
 					id: 'servicetypeid',
+					useVariables: true,
 					tooltip: 'PCO Service Type Id to control.',
 				},
 				{
 					type: 'textinput',
 					label: 'PCO Plan Id',
 					id: 'planid',
+					useVariables: true,
 					tooltip: 'PCO Plan Id to control.',
 				},
 			],
@@ -615,6 +619,106 @@ module.exports = {
 				}				
 			}
 		};*/
+
+		/* Plan Picker: choose a service type, pick one of its next few plans, then take control */
+		let pickerSlotChoices = []
+		for (let i = 1; i <= self.getPickerSlotCount(); i++) {
+			pickerSlotChoices.push({ id: i, label: `Plan ${i}` })
+		}
+
+		actions.picker_load_plans = {
+			name: 'Plan Picker: Load Upcoming Plans for Service Type',
+			description:
+				'Loads the next few upcoming plans for a service type into the picker variables (picker_plan_1_dates, etc). The soonest plan is selected by default. The list refreshes every 5 minutes.',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'PCO Service Type',
+					id: 'servicetypeid',
+					default: self.currentState.internal.services_list[0].id,
+					choices: self.currentState.internal.services_list,
+					allowCustom: true,
+					tooltip: 'Pick a service type, or type a Service Type Id (variables are supported).',
+				},
+			],
+			callback: async function (event) {
+				let serviceTypeId = await self.parseVariablesInString(`${event.options.servicetypeid}`)
+				self.loadPickerPlans(serviceTypeId, false)
+			},
+		}
+
+		actions.picker_refresh_plans = {
+			name: 'Plan Picker: Refresh Upcoming Plans',
+			description: 'Reloads the upcoming plans for the service type already loaded in the picker.',
+			options: [],
+			callback: async function () {
+				self.loadPickerPlans(self.picker.serviceTypeId, true)
+			},
+		}
+
+		actions.picker_select_plan = {
+			name: 'Plan Picker: Select Plan',
+			description: 'Selects one of the loaded upcoming plans (Plan 1 is the soonest).',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Plan Slot',
+					id: 'slot',
+					default: 1,
+					choices: pickerSlotChoices,
+				},
+			],
+			callback: async function (event) {
+				self.selectPickerSlot(parseInt(event.options.slot))
+			},
+		}
+
+		actions.picker_step_selection = {
+			name: 'Plan Picker: Select Next/Previous Plan',
+			description: 'Moves the picker selection to the next or previous upcoming plan.',
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Direction',
+					id: 'direction',
+					default: 'next',
+					choices: [
+						{ id: 'next', label: 'Next (later plan)' },
+						{ id: 'previous', label: 'Previous (sooner plan)' },
+					],
+				},
+			],
+			callback: async function (event) {
+				self.stepPickerSelection(event.options.direction === 'previous' ? -1 : 1)
+			},
+		}
+
+		actions.picker_take_control = {
+			name: 'Plan Picker: Take Control of Selected Plan',
+			description:
+				'Takes control of the plan selected in the picker and starts polling it, so the current/next item variables follow it.',
+			options: [],
+			callback: async function () {
+				self.pickerTakeControl()
+			},
+		}
+
+		actions.picker_release_control = {
+			name: 'Plan Picker: Release Control of Selected Plan',
+			options: [],
+			callback: async function () {
+				self.pickerReleaseControl()
+			},
+		}
+
+		actions.picker_clear = {
+			name: 'Plan Picker: Clear',
+			description: 'Clears the picker service type, plans and selection.',
+			options: [],
+			callback: async function () {
+				self.clearPicker()
+			},
+		}
 
 		self.setActionDefinitions(actions)
 	},

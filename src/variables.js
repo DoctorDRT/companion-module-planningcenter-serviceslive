@@ -33,6 +33,8 @@ module.exports = {
 			{ variableId: 'last_plan_name', name: 'Last Controlled Plan Name' },
 		]
 
+		variables.push(...self.getPickerVariableDefinitions())
+
 		if (self.planItemNoteCategories.length > 0) {
 			//if we have note categories, then lets add them to the variables
 			//console.log('planItemNoteCategories', self.planItemNoteCategories)
@@ -211,8 +213,15 @@ module.exports = {
 				: ''
 			variableObj.last_plan_id = this.lastPlanId
 			variableObj.last_plan_name = this.lastPlanId
-				? this.currentState.internal.plans.find((plan) => plan.id === this.lastPlanId)?.attributes?.dates
+				? this.currentState.internal.plans.find((plan) => plan.id === this.lastPlanId)?.attributes?.dates ||
+					this.picker.plans.find((plan) => plan.id === this.lastPlanId)?.dates ||
+					''
 				: ''
+			if (!variableObj.last_servicetype_name && this.lastServiceTypeId === this.picker.serviceTypeId) {
+				variableObj.last_servicetype_name = this.picker.serviceTypeName
+			}
+
+			Object.assign(variableObj, this.getPickerVariableValues())
 
 			if (self.scheduledPeople.length > 0) {
 				//lets populate the variables for the teams and positions

@@ -150,6 +150,10 @@ module.exports = {
 					})
 			}
 
+			//service types are known now, so refresh the dropdowns/presets that list them (Plan Picker)
+			self.initFeedbacks()
+			self.initPresets()
+
 			self.updateStatus(InstanceStatus.Ok)
 		} catch (error) {
 			self.log('error', 'Error processing Services data: ' + error)
