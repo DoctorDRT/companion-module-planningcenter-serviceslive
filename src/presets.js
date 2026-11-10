@@ -1,6 +1,7 @@
 import { combineRgb } from '@companion-module/base'
 
 import png64 from './png64.js'
+import { getLayeredPresets } from './presets-layered.js'
 
 async function generateImages(count) {
 	const imagePromises = Array.from({ length: count }, (_, i) => {
@@ -838,7 +839,7 @@ export default {
 			feedbacks: [],
 		}
 
-		const { structure, definitions } = toV2Presets(presets, {})
+		const { structure, definitions } = toV2Presets(presets, getLayeredPresets(self))
 		this.setPresetDefinitions(structure, definitions)
 	},
 }
