@@ -13,657 +13,180 @@ async function generateImages(count) {
 }
 
 export default {
+	/* The teams on the plan being followed (empty when nobody is scheduled) */
+	getScheduledTeams() {
+		return (this.CHOICES_TEAMS || []).filter((team) => team.id && team.id !== 'scheduled_no_teams')
+	},
+
 	async initPresets() {
 		let self = this
-		let presets = []
+		let presets = {}
+
+		const white = combineRgb(255, 255, 255)
+		const black = combineRgb(0, 0, 0)
+		const v = (variable) => `$(services-live:${variable})`
+
+		/*
+		 * Current Item and Next Item. Each button always shows a label, so it reads sensibly before a plan is running.
+		 * These simple versions are the fallback for the layered designs in presets-layered.js (same ids).
+		 */
+		const infoPreset = (category, name, label, variable, feedbacks = []) => ({
+			type: 'button',
+			category: category,
+			name: name,
+			style: { text: `${label}\\n${v(variable)}`, size: 'auto', color: white, bgcolor: black },
+			steps: [{ down: [], up: [] }],
+			feedbacks: feedbacks,
+		})
+		const overrun = [
+			{ feedbackId: 'item_overrun', options: {}, style: { color: white, bgcolor: combineRgb(210, 34, 45) } },
+		]
 
 		presets.plan_index = {
 			type: 'button',
 			category: 'Current Item',
-			label: 'Current Item Index in Plan',
+			name: 'Item Number in Plan (Item 3 of 12)',
 			style: {
-				text: '$(services-live:plan_index) of $(services-live:plan_length)',
+				text: `'Item: ' + (${v('plan_index')} ? ${v('plan_index')} : '#') + ' of ' + (${v('plan_length')} ? ${v('plan_length')} : '#')`,
+				textExpression: true,
 				size: 'auto',
-				color: combineRgb(255, 255, 255),
-				bgcolor: combineRgb(0, 0, 0),
+				color: white,
+				bgcolor: black,
 			},
-			steps: [
-				{
-					down: [],
-					up: [],
-				},
-			],
+			steps: [{ down: [], up: [] }],
 			feedbacks: [],
 		}
+		presets.currentitem = infoPreset('Current Item', 'Current Item', 'NOW', 'plan_currentitem')
+		presets.currentitem_time_length = infoPreset(
+			'Current Item',
+			'Current Item Length',
+			'LENGTH',
+			'plan_currentitem_time_length',
+		)
+		presets.currentitem_time_started = infoPreset(
+			'Current Item',
+			'Current Item Started At',
+			'STARTED',
+			'plan_currentitem_time_started',
+		)
+		presets.current_item_time_remaining = infoPreset(
+			'Current Item',
+			'Current Item Time Remaining',
+			'REMAINING',
+			'plan_currentitem_time_remaining',
+			overrun,
+		)
+		presets.currentitem_time_shouldfinish = infoPreset(
+			'Current Item',
+			'Current Item Should End At',
+			'ENDS AT',
+			'plan_currentitem_time_shouldfinish',
+			overrun,
+		)
+		presets.currentitem_key = infoPreset('Current Item', 'Current Item Key', 'KEY', 'plan_currentitem_key')
 
-		presets.currentitem = {
-			type: 'button',
-			category: 'Current Item',
-			label: 'Current Item',
-			style: {
-				text: '$(services-live:plan_currentitem)',
-				size: 'auto',
-				color: combineRgb(255, 255, 255),
-				bgcolor: combineRgb(0, 0, 0),
-			},
-			steps: [
-				{
-					down: [],
-					up: [],
-				},
-			],
-			feedbacks: [],
-		}
+		presets.nextitem = infoPreset('Next Item', 'Next Item', 'NEXT', 'plan_nextitem')
+		presets.nextitem_time_length = infoPreset(
+			'Next Item',
+			'Next Item Length',
+			'NEXT LENGTH',
+			'plan_nextitem_time_length',
+		)
+		presets.nextitem_key = infoPreset('Next Item', 'Next Item Key', 'NEXT KEY', 'plan_nextitem_key')
 
-		presets.currentitem_time_length = {
-			type: 'button',
-			category: 'Current Item',
-			label: 'Current Item Time Length',
-			style: {
-				text: '$(services-live:plan_currentitem_time_length)',
-				size: 'auto',
-				color: combineRgb(255, 255, 255),
-				bgcolor: combineRgb(0, 0, 0),
-			},
-			steps: [
-				{
-					down: [],
-					up: [],
-				},
-			],
-			feedbacks: [],
-		}
+		/*
+		 * Scheduled People, for the plan being followed.
+		 * "Position and Person" buttons show the position, the person and a status badge (layered design in
+		 * presets-layered.js, with this simple version as the fallback). "Photo with Status" uses the photo feedbacks.
+		 * Generic buttons count every scheduled position in order; team buttons count within one team.
+		 */
+		const statusColors = { C: combineRgb(31, 166, 74), U: combineRgb(230, 160, 0), D: combineRgb(210, 34, 45) }
+		const PRESET_NUMBERS = await generateImages(50)
 
-		presets.currentitem_time_started = {
-			type: 'button',
-			category: 'Current Item',
-			label: 'Current Item Time Started',
-			style: {
-				text: '$(services-live:plan_currentitem_time_started)',
-				size: 'auto',
-				color: combineRgb(255, 255, 255),
-				bgcolor: combineRgb(0, 0, 0),
-			},
-			steps: [
-				{
-					down: [],
-					up: [],
-				},
-			],
-			feedbacks: [],
-		}
-
-		presets.current_item_time_remaining = {
-			type: 'button',
-			category: 'Current Item',
-			label: 'Current Item Time Remaining',
-			style: {
-				text: '$(services-live:plan_currentitem_time_remaining)',
-				size: 'auto',
-				color: combineRgb(255, 255, 255),
-				bgcolor: combineRgb(0, 0, 0),
-			},
-			steps: [
-				{
-					down: [],
-					up: [],
-				},
-			],
-			feedbacks: [
-				{
-					feedbackId: 'item_overrun',
-					options: {},
-					style: {
-						color: combineRgb(255, 255, 255),
-						bgcolor: combineRgb(255, 0, 0),
-					},
-				},
-			],
-		}
-
-		presets.currentitem_time_shouldfinish = {
-			type: 'button',
-			category: 'Current Item',
-			label: 'Current Item Time Should Finish',
-			style: {
-				text: '$(services-live:plan_currentitem_time_shouldfinish)',
-				size: 'auto',
-				color: combineRgb(255, 255, 255),
-				bgcolor: combineRgb(0, 0, 0),
-			},
-			steps: [
-				{
-					down: [],
-					up: [],
-				},
-			],
-			feedbacks: [
-				{
-					feedbackId: 'item_overrun',
-					options: {},
-					style: {
-						color: combineRgb(255, 255, 255),
-						bgcolor: combineRgb(255, 0, 0),
-					},
-				},
-			],
-		}
-
-		presets.currentitem_key = {
-			type: 'button',
-			category: 'Current Item',
-			label: 'Current Item Key',
-			style: {
-				text: '$(services-live:plan_currentitem_key)',
-				size: 'auto',
-				color: combineRgb(255, 255, 255),
-				bgcolor: combineRgb(0, 0, 0),
-			},
-			steps: [
-				{
-					down: [],
-					up: [],
-				},
-			],
-			feedbacks: [],
-		}
-
-		presets.nextitem = {
-			type: 'button',
-			category: 'Next Item',
-			label: 'Next Item',
-			style: {
-				text: '$(services-live:plan_nextitem)',
-				size: 'auto',
-				color: combineRgb(255, 255, 255),
-				bgcolor: combineRgb(0, 0, 0),
-			},
-			steps: [
-				{
-					down: [],
-					up: [],
-				},
-			],
-			feedbacks: [],
-		}
-
-		presets.nextitem_time_length = {
-			type: 'button',
-			category: 'Next Item',
-			label: 'Next Item Time Length',
-			style: {
-				text: '$(services-live:plan_nextitem_time_length)',
-				size: 'auto',
-				color: combineRgb(255, 255, 255),
-				bgcolor: combineRgb(0, 0, 0),
-			},
-			steps: [
-				{
-					down: [],
-					up: [],
-				},
-			],
-			feedbacks: [],
-		}
-
-		presets.nextitem_key = {
-			type: 'button',
-			category: 'Next Item',
-			label: 'Next Item Key',
-			style: {
-				text: '$(services-live:plan_nextitem_key)',
-				size: 'auto',
-				color: combineRgb(255, 255, 255),
-				bgcolor: combineRgb(0, 0, 0),
-			},
-			steps: [
-				{
-					down: [],
-					up: [],
-				},
-			],
-			feedbacks: [],
-		}
-
-		//scheduled people feedbacks
-
-		//first build them for the generic position number - this is for recycleable presets where you may not know the position name from plan to plan, but you want to populate buttons
-
-		//need to generate the preset numbers for the buttons first
-		let PRESET_NUMBERS = await generateImages(50)
-
-		//let's make 1-50
-
-		presets.push({
-			category: `Scheduled People - Generic Position`,
-			name: `Generic Position Number - Person Photo Only`,
-			type: 'text',
-			text: `Show the photo of the person scheduled to the position number.`,
-		})
-
-		for (let i = 1; i <= 50; i++) {
-			let presetObj = {
-				type: 'button',
-				category: 'Scheduled People - Generic Position',
-				label: `Scheduled Position ${i} - Photo Only`,
-				style: {
-					text: '',
-					png64: PRESET_NUMBERS[i - 1],
-					pngalignment: 'center:center',
-					size: 'auto',
-					color: combineRgb(255, 255, 255),
-					bgcolor: combineRgb(0, 0, 0),
-				},
-				steps: [
-					{
-						down: [],
-						up: [],
-					},
-				],
-				feedbacks: [
-					{
-						feedbackId: 'showPersonPhotoPositionNumber',
-						options: {
-							positionNumber: i,
-						},
-						style: {
-							color: combineRgb(255, 255, 255),
-							bgcolor: combineRgb(0, 0, 0),
-						},
-					},
-				],
-			}
-			presets.push(presetObj)
-		}
-
-		presets.push({
-			category: `Scheduled People - Generic Position`,
-			name: `Generic Position Number - Person Photo With Status`,
-			type: 'text',
-			text: `Show the photo of the person scheduled to the position number, with their status (confirmed, unconfirmed, declined).`,
-		})
-
-		//now build them for the generic position number with status
-		for (let i = 1; i <= 50; i++) {
-			let presetObj = {
-				type: 'button',
-				category: 'Scheduled People - Generic Position',
-				label: `Scheduled Position ${i} - Photo With Status`,
-				style: {
-					text: '',
-					png64: PRESET_NUMBERS[i - 1],
-					pngalignment: 'center:center',
-					size: 'auto',
-					color: combineRgb(255, 255, 255),
-					bgcolor: combineRgb(0, 0, 0),
-				},
-				steps: [
-					{
-						down: [],
-						up: [],
-					},
-				],
-				feedbacks: [
-					{
-						feedbackId: 'showPersonPhotoPositionNumberWithStatus',
-						options: {
-							positionNumber: i,
-							borderType: 'bottom',
-							borderWidth: 25,
-							borderOpacity: 255,
-						},
-						style: {
-							color: combineRgb(255, 255, 255),
-							bgcolor: combineRgb(0, 0, 0),
-						},
-					},
-				],
-			}
-			presets.push(presetObj)
-		}
-
-		presets.push({
-			category: `Scheduled People - Generic Position`,
-			name: `Generic Position Number - Person Name Only`,
-			type: 'text',
-			text: `Presets for Generic Position Number with Person Name Only`,
-		})
-		//now build them for the generic position number with status
-		for (let i = 1; i <= 50; i++) {
-			let presetObj = {
-				type: 'button',
-				category: 'Scheduled People - Generic Position',
-				label: `Scheduled Position ${i} - Person Name`,
-				style: {
-					text: `$(services-live:scheduled_position_${i})`,
-					size: 'auto',
-					color: combineRgb(255, 255, 255),
-					bgcolor: combineRgb(0, 0, 0),
-				},
-				steps: [
-					{
-						down: [],
-						up: [],
-					},
-				],
-				feedbacks: [],
-			}
-			presets.push(presetObj)
-		}
-
-		presets.push({
-			category: `Scheduled People - Generic Position`,
-			name: `Generic Position Number - Person Name with Status Feedback`,
-			type: 'text',
-			text: `Shows the name of the person scheduled to the position number with status feedback (green, yellow, or red depending on if confirmed, unconfirmed, or declined).`,
-		})
-
-		//now build them for the generic position number with status
-		for (let i = 1; i <= 50; i++) {
-			let presetObj = {
-				type: 'button',
-				category: 'Scheduled People - Generic Position',
-				label: `Scheduled Position ${i} - Person Name with Status`,
-				style: {
-					text: `$(services-live:scheduled_position_${i})`,
-					size: 'auto',
-					color: combineRgb(255, 255, 255),
-					bgcolor: combineRgb(0, 0, 0),
-				},
-				steps: [
-					{
-						down: [],
-						up: [],
-					},
-				],
-				feedbacks: [
-					{
-						feedbackId: 'showPersonStatusByPositionNumber',
-						options: {
-							positionNumber: i,
-							status: 'C', // Confirmed
-						},
-						style: {
-							color: combineRgb(255, 255, 255),
-							bgcolor: combineRgb(0, 255, 0),
-						},
-					},
-					{
-						feedbackId: 'showPersonStatusByPositionNumber',
-						options: {
-							positionNumber: i,
-							status: 'U', // Unconfirmed
-						},
-						style: {
-							color: combineRgb(255, 255, 255),
-							bgcolor: combineRgb(255, 255, 0),
-						},
-					},
-					{
-						feedbackId: 'showPersonStatusByPositionNumber',
-						options: {
-							positionNumber: i,
-							status: 'D', // Declined
-						},
-						style: {
-							color: combineRgb(255, 255, 255),
-							bgcolor: combineRgb(255, 0, 0),
-						},
-					},
-				],
-			}
-			presets.push(presetObj)
-		}
-
-		presets.push({
-			category: `Scheduled People - Generic Position`,
-			name: `Generic Position Number - Position Name Only`,
-			type: 'text',
-			text: `Show the position name of the person scheduled to the position number.`,
-		})
-		//now build them for the generic position number with status
-		for (let i = 1; i <= 50; i++) {
-			let presetObj = {
-				type: 'button',
-				category: 'Scheduled People - Generic Position',
-				label: `Scheduled Position ${i} - Position Name`,
-				style: {
-					text: `$(services-live:scheduled_position_${i}_position)`,
-					size: 'auto',
-					color: combineRgb(255, 255, 255),
-					bgcolor: combineRgb(0, 0, 0),
-				},
-				steps: [
-					{
-						down: [],
-						up: [],
-					},
-				],
-				feedbacks: [],
-			}
-			presets.push(presetObj)
-		}
-
-		//now build them for team generic position number - sorted by team
-		//let's make 1-30
-		for (let team in self.CHOICES_TEAMS) {
-			let teamId = self.CHOICES_TEAMS[team].id
-			let teamName = self.CHOICES_TEAMS[team].label
-
-			presets.push({
-				category: `Scheduled People - ${teamName}`,
-				name: `${teamName} - Generic Position Number - Photo Only`,
+		const scheduledGroup = (category, count, prefix, idPrefix, nameStatusFeedback, photoFeedback, extraOptions) => {
+			presets[`${idPrefix}_header_person`] = {
 				type: 'text',
-				text: `Show the photo of the person scheduled to the position number for ${teamName}`,
-			})
-
-			for (let i = 1; i <= 30; i++) {
-				let presetObj = {
+				category: category,
+				name: 'Position and Person',
+				text: 'The position name, who is scheduled, and a badge for their status (check = confirmed, ? = unconfirmed, X = declined).',
+			}
+			for (let i = 1; i <= count; i++) {
+				presets[`${idPrefix}_${i}`] = {
 					type: 'button',
-					category: `Scheduled People - ${teamName}`,
-					label: `${teamName}: Scheduled Position ${i} - Photo Only`,
+					category: category,
+					name: `${prefix}Position ${i}`,
 					style: {
-						text: '',
-						png64: PRESET_NUMBERS[i - 1],
-						pngalignment: 'center:center',
+						text: `${v(`${idPrefix}_${i}_position`)}\\n${v(`${idPrefix}_${i}`)}`,
 						size: 'auto',
-						color: combineRgb(255, 255, 255),
-						bgcolor: combineRgb(0, 0, 0),
+						color: white,
+						bgcolor: black,
 					},
-					steps: [
-						{
-							down: [],
-							up: [],
-						},
-					],
-					feedbacks: [
-						{
-							feedbackId: 'showPersonPhotoPositionNumberByTeam',
-							options: {
-								team: teamId,
-								positionNumber: i,
-							},
-							style: {
-								color: combineRgb(255, 255, 255),
-								bgcolor: combineRgb(0, 0, 0),
-							},
-						},
-					],
+					steps: [{ down: [], up: [] }],
+					feedbacks: ['C', 'U', 'D'].map((status) => ({
+						feedbackId: nameStatusFeedback,
+						options: { ...extraOptions, positionNumber: i, status: status },
+						style: { color: white, bgcolor: statusColors[status] },
+					})),
 				}
-				presets.push(presetObj)
 			}
 
-			presets.push({
-				category: `Scheduled People - ${teamName}`,
-				name: `${teamName} - Generic Position Number - Photo with Status`,
+			presets[`${idPrefix}_header_photo`] = {
 				type: 'text',
-				text: `Show the photo of the person scheduled to the position number for ${teamName} with status`,
-			})
-			//now build them for the generic position number with status
-			for (let i = 1; i <= 30; i++) {
-				let presetObj = {
+				category: category,
+				name: 'Photo with Status',
+				text: 'The photo of the person scheduled to that position, with a status bar along the bottom.',
+			}
+			for (let i = 1; i <= count; i++) {
+				presets[`${idPrefix}_photo_${i}`] = {
 					type: 'button',
-					category: `Scheduled People - ${teamName}`,
-					label: `${teamName}: Scheduled Position ${i} - Photo with Status`,
+					category: category,
+					name: `${prefix}Position ${i} Photo`,
 					style: {
 						text: '',
 						png64: PRESET_NUMBERS[i - 1],
 						pngalignment: 'center:center',
 						size: 'auto',
-						color: combineRgb(255, 255, 255),
-						bgcolor: combineRgb(0, 0, 0),
+						color: white,
+						bgcolor: black,
 					},
-					steps: [
-						{
-							down: [],
-							up: [],
-						},
-					],
+					steps: [{ down: [], up: [] }],
 					feedbacks: [
 						{
-							feedbackId: 'showPersonPhotoPositionNumberByTeamWithStatus',
+							feedbackId: photoFeedback,
 							options: {
-								team: teamId,
+								...extraOptions,
 								positionNumber: i,
 								borderType: 'bottom',
 								borderWidth: 25,
 								borderOpacity: 255,
 							},
-							style: {
-								color: combineRgb(255, 255, 255),
-								bgcolor: combineRgb(0, 0, 0),
-							},
+							style: { color: white, bgcolor: black },
 						},
 					],
 				}
-				presets.push(presetObj)
 			}
+		}
 
-			presets.push({
-				category: `Scheduled People - ${teamName}`,
-				name: `${teamName} - Generic Position Number - Person Name Only`,
-				type: 'text',
-				text: `Show the name of the person scheduled to the position number for ${teamName}`,
-			})
+		scheduledGroup(
+			'Scheduled People',
+			50,
+			'',
+			'scheduled_position',
+			'showPersonStatusByPositionNumber',
+			'showPersonPhotoPositionNumberWithStatus',
+			{},
+		)
 
-			//now build them for the generic position number with status
-			for (let i = 1; i <= 30; i++) {
-				let presetObj = {
-					type: 'button',
-					category: `Scheduled People - ${teamName}`,
-					label: `${teamName}: Scheduled Position ${i} - Person Name`,
-					style: {
-						text: `$(services-live:scheduled_${teamId}_position_${i})`,
-						size: 'auto',
-						color: combineRgb(255, 255, 255),
-						bgcolor: combineRgb(0, 0, 0),
-					},
-					steps: [
-						{
-							down: [],
-							up: [],
-						},
-					],
-					feedbacks: [],
-				}
-				presets.push(presetObj)
-			}
-
-			presets.push({
-				category: `Scheduled People - ${teamName}`,
-				name: `${teamName} - Generic Position Number - Person Name with Status`,
-				type: 'text',
-				text: `Shows the name of the person scheduled to the position number for ${teamName} with status feedback (green, yellow, or red depending on if confirmed, unconfirmed, or declined).`,
-			})
-			//now build them for the generic position number with status
-			for (let i = 1; i <= 30; i++) {
-				let presetObj = {
-					type: 'button',
-					category: `Scheduled People - ${teamName}`,
-					label: `${teamName}: Scheduled Position ${i} - Person Name with Status`,
-					style: {
-						text: `$(services-live:scheduled_${teamId}_position_${i})`,
-						size: 'auto',
-						color: combineRgb(255, 255, 255),
-						bgcolor: combineRgb(0, 0, 0),
-					},
-					steps: [
-						{
-							down: [],
-							up: [],
-						},
-					],
-					feedbacks: [
-						{
-							feedbackId: 'showPersonStatusPositionNumberByTeam',
-							options: {
-								team: teamId,
-								positionNumber: i,
-								status: 'C', // Confirmed
-							},
-							style: {
-								color: combineRgb(255, 255, 255),
-								bgcolor: combineRgb(0, 255, 0),
-							},
-						},
-						{
-							feedbackId: 'showPersonStatusPositionNumberByTeam',
-							options: {
-								team: teamId,
-								positionNumber: i,
-								status: 'U', // Unconfirmed
-							},
-							style: {
-								color: combineRgb(255, 255, 255),
-								bgcolor: combineRgb(255, 255, 0),
-							},
-						},
-						{
-							feedbackId: 'showPersonStatusPositionNumberByTeam',
-							options: {
-								team: teamId,
-								positionNumber: i,
-								status: 'D', // Declined
-							},
-							style: {
-								color: combineRgb(255, 255, 255),
-								bgcolor: combineRgb(255, 0, 0),
-							},
-						},
-					],
-				}
-				presets.push(presetObj)
-			}
-
-			presets.push({
-				category: `Scheduled People - ${teamName}`,
-				name: `${teamName} - Generic Position Number - Position Name Only`,
-				type: 'text',
-				text: `Show the position name of the person scheduled to the position number for ${teamName}`,
-			})
-
-			//now build them for the generic position number with status
-			for (let i = 1; i <= 30; i++) {
-				let presetObj = {
-					type: 'button',
-					category: `Scheduled People - ${teamName}`,
-					label: `${teamName}: Scheduled Position ${i} - Position Name`,
-					style: {
-						text: `$(services-live:scheduled_${teamId}_position_${i}_position)`,
-						size: 'auto',
-						color: combineRgb(255, 255, 255),
-						bgcolor: combineRgb(0, 0, 0),
-					},
-					steps: [
-						{
-							down: [],
-							up: [],
-						},
-					],
-					feedbacks: [],
-				}
-				presets.push(presetObj)
-			}
+		for (let team of self.getScheduledTeams()) {
+			scheduledGroup(
+				`Scheduled People - ${team.label}`,
+				30,
+				`${team.label}: `,
+				`scheduled_${team.id}_position`,
+				'showPersonStatusPositionNumberByTeam',
+				'showPersonPhotoPositionNumberByTeamWithStatus',
+				{ team: team.id },
+			)
 		}
 
 		/* Plan Picker presets */
@@ -910,7 +433,7 @@ export default {
 	},
 }
 
-const SECTION_ORDER = ['Plan Picker', 'Current Item', 'Next Item']
+const SECTION_ORDER = ['Plan Picker', 'Current Item', 'Next Item', 'Scheduled People']
 
 const slug = (str) =>
 	`${str}`

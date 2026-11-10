@@ -239,11 +239,15 @@ Open the **Variables** tab in Companion to see the exact names for your teams.
 Presets are in the **Presets** tab under this connection:
 
 - **Plan Picker**, in groups: Specific Service Types (one button per service type), Folders (one Load button per folder), Service Type Slots, Upcoming Plans, and Control (Take/Release).
-- **Current Item**: current item name, time remaining, countdown gauge and more.
+- **Current Item**: item number ("Item 3 of 12" with a progress bar), current item name, length, start time, time remaining, end time, key, and a countdown with a progress bar.
 - **Next Item**: next item name, length and key.
-- **Scheduled People**: photo and status buttons for each scheduled position, generic and per team.
+- **Scheduled People**: for the plan being followed, one section for every scheduled position in order, plus one section per team.
+  - **Position and Person** shows the position name, who is scheduled, and a status badge in the corner: a green check for confirmed, an amber question mark for unconfirmed, and a red X for declined.
+  - **Photo with Status** shows the person's photo with a status bar along the bottom.
 
-The Plan Picker and countdown presets use Companion 5's layered button designs. Where a layered design can't be shown, Companion uses the plain version instead. Every layered button can be changed after you drop it on a page: open the button and edit its elements.
+Current Item and Next Item buttons always show their label (NOW, NEXT, REMAINING...). Before a plan is running they show a dim placeholder such as "Item: # of #" or "--:--", and fill in once a plan is followed.
+
+Most presets use Companion 5's layered button designs. Where a layered design can't be shown, Companion uses a plain version instead. Every layered button can be changed after you drop it on a page: open the button and edit its elements.
 
 ---
 
