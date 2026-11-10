@@ -12,6 +12,7 @@ const TEAM_POSITIONS_REFRESH_MS = 60 * 1000
 const ITEM_NOTE_CATEGORIES_REFRESH_MS = 5 * 60 * 1000
 const ITEM_NOTES_REFRESH_MS = 60 * 1000
 const PLAN_DETAILS_REFRESH_MS = 5 * 60 * 1000
+const COUNTDOWN_CHECK_MS = 250 //how often the countdown checks the clock (the buttons still only change once a second)
 
 export default {
 	/* The Secret Key is kept in Companion's secrets store (older configs kept it in the normal config) */
@@ -613,11 +614,12 @@ export default {
 						let timeStarted_formatted = dtTimeStarted.toLocaleTimeString()
 						let dtTimeShouldFinish = new Date(dtTimeStarted.getTime() + item.attributes.length * 1000)
 
-						if (item.id !== self.lastPlanItemId) {
-							//start the interval to calculate time remaining
-							//this will make it look nicer displaying the time rather than only updating whenever the polling updates
+						//recalculated on every poll (no extra requests), so a length edited in PCO or a restarted item shows up
+						self.itemShouldFinishAt = dtTimeShouldFinish
+						if (item.id !== self.lastPlanItemId || !self.ITEM_TIME_REMAINING_INTERVAL) {
+							//the countdown runs locally between polls, so it ticks smoothly
 							self.lastPlanItemId = item.id
-							self.startPlanItemTimeRemainingInterval(dtTimeStarted, dtTimeShouldFinish)
+							self.startPlanItemTimeRemainingInterval()
 						}
 
 						let timeLength = item.attributes.length
@@ -902,15 +904,32 @@ export default {
 		})
 	},
 
-	startPlanItemTimeRemainingInterval: function (dtTimeStarted, dtTimeShouldFinish) {
+	/*
+	 * The current item countdown. Checks the clock at least 4 times a second and right as each second turns over,
+	 * so the number changes on time, and only sends the variables when the shown value changes. Counts against itemShouldFinishAt,
+	 * which every poll refreshes.
+	 *
+	 * Rounds up, like most countdown clocks: 0:01 is shown for the last second, and the overrun starts
+	 * (-0:01, item_overrun) as soon as the item's time is up.
+	 */
+	startPlanItemTimeRemainingInterval: function () {
 		let self = this
 
 		clearInterval(self.ITEM_TIME_REMAINING_INTERVAL)
+		self.lastTimeRemainingSeconds = undefined
 
-		self.ITEM_TIME_REMAINING_INTERVAL = setInterval(function () {
+		const tick = function () {
 			try {
-				let dtNow = new Date()
-				let timeRemaining = Math.floor((dtTimeShouldFinish.getTime() - dtNow.getTime()) / 1000)
+				if (!self.itemShouldFinishAt) {
+					return
+				}
+				let secondsLeft = (self.itemShouldFinishAt.getTime() - Date.now()) / 1000
+				let timeRemaining = secondsLeft > 0 ? Math.ceil(secondsLeft) : -Math.ceil(-secondsLeft)
+				if (timeRemaining === self.lastTimeRemainingSeconds) {
+					return //nothing visible changed
+				}
+				self.lastTimeRemainingSeconds = timeRemaining
+
 				let timeRemaining_formatted =
 					Math.floor(Math.abs(timeRemaining) / 60) + ':' + ('0' + Math.floor(Math.abs(timeRemaining) % 60)).slice(-2)
 				if (timeRemaining < 0) {
@@ -925,11 +944,23 @@ export default {
 				})
 				self.checkFeedbacks('item_overrun')
 			} catch (error) {
-				//just silently fail to the terminal because it's just a variable update
-				console.log('Error updating plan item time remaining: ')
-				console.log(error)
+				//just a variable update, so only log it
+				self.log('debug', 'Error updating plan item time remaining: ' + error)
 			}
-		}, 1000)
+		}
+
+		//check again right when the shown second changes (at most COUNTDOWN_CHECK_MS away, so poll updates show quickly).
+		//a chain of timeouts in the same handle, which clearInterval also stops
+		const schedule = function () {
+			tick()
+			let delay = COUNTDOWN_CHECK_MS
+			if (self.itemShouldFinishAt) {
+				let msToNextSecond = (((self.itemShouldFinishAt.getTime() - Date.now()) % 1000) + 1000) % 1000
+				delay = Math.min(COUNTDOWN_CHECK_MS, msToNextSecond + 5)
+			}
+			self.ITEM_TIME_REMAINING_INTERVAL = setTimeout(schedule, delay)
+		}
+		schedule()
 	},
 
 	/* Resolves with the id of the next upcoming plan in a service type. Rejects with a message on failure. */
