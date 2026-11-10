@@ -1,4 +1,4 @@
-module.exports = {
+export default {
 	initVariables() {
 		let self = this
 
@@ -15,6 +15,7 @@ module.exports = {
 
 			{ variableId: 'plan_currentitem', name: 'Plan Current Item' },
 			{ variableId: 'plan_currentitem_time_length', name: 'Plan Current Item Time Length' },
+			{ variableId: 'plan_currentitem_time_length_seconds', name: 'Plan Current Item Time Length Seconds' },
 			{ variableId: 'plan_currentitem_time_started', name: 'Plan Current Item Time Started' },
 			{ variableId: 'plan_currentitem_time_remaining', name: 'Plan Current Item Time Remaining' },
 			{ variableId: 'plan_currentitem_time_remaining_seconds', name: 'Plan Current Item Time Remaining Seconds' },
@@ -161,7 +162,7 @@ module.exports = {
 				teamPositionPhotoThumbnailVariable.variableId = teamPositionVariable.variableId + '_photo_thumbnail'
 				teamPositionPhotoThumbnailVariable.name = teamPositionVariable.name + ' Photo Thumbnail'
 
-				teamPositionByNumberVariable = {
+				let teamPositionByNumberVariable = {
 					variableId: 'scheduled_' + teamNameId + '_' + positionNameId,
 					name: teamName + ': ' + positionName,
 				}
@@ -172,7 +173,12 @@ module.exports = {
 			})
 		}
 
-		self.setVariableDefinitions(variables)
+		//the v2 module api takes an object keyed by variable id
+		let variableDefinitions = {}
+		variables.forEach((variable) => {
+			variableDefinitions[variable.variableId] = { name: variable.name }
+		})
+		self.setVariableDefinitions(variableDefinitions)
 	},
 
 	checkVariables() {
@@ -193,6 +199,8 @@ module.exports = {
 
 			variableObj.plan_currentitem = this.currentState.dynamicVariables.plan_currentitem
 			variableObj.plan_currentitem_time_length = this.currentState.dynamicVariables.plan_currentitem_time_length
+			variableObj.plan_currentitem_time_length_seconds =
+				this.currentState.dynamicVariables.plan_currentitem_time_length_seconds ?? 0
 			variableObj.plan_currentitem_time_started = this.currentState.dynamicVariables.plan_currentitem_time_started
 			variableObj.plan_currentitem_time_remaining = this.currentState.dynamicVariables.plan_currentitem_time_remaining
 			variableObj.plan_currentitem_time_remaining_seconds =

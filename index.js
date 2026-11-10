@@ -1,19 +1,21 @@
 // PlanningCenterOnline-Services-Live
 
-const { InstanceBase, InstanceStatus, runEntrypoint } = require('@companion-module/base')
+import { InstanceBase, InstanceStatus } from '@companion-module/base'
 
-const UpgradeScripts = require('./src/upgrades')
+import upgradeScripts from './src/upgrades.js'
 
-const config = require('./src/config')
-const api = require('./src/api')
+import config from './src/config.js'
+import api from './src/api.js'
 
-const actions = require('./src/actions')
-const variables = require('./src/variables')
-const feedbacks = require('./src/feedbacks')
-const presets = require('./src/presets')
-const picker = require('./src/picker')
+import actions from './src/actions.js'
+import variables from './src/variables.js'
+import feedbacks from './src/feedbacks.js'
+import presets from './src/presets.js'
+import picker from './src/picker.js'
 
-class PCOLiveInstance extends InstanceBase {
+export const UpgradeScripts = upgradeScripts
+
+export default class PCOLiveInstance extends InstanceBase {
 	constructor(internal) {
 		super(internal)
 
@@ -98,12 +100,13 @@ class PCOLiveInstance extends InstanceBase {
 		]
 	}
 
-	async init(config) {
-		this.configUpdated(config)
+	async init(config, isFirstInit, secrets) {
+		await this.configUpdated(config, secrets)
 	}
 
-	async configUpdated(config) {
+	async configUpdated(config, secrets) {
 		this.config = config
+		this.secrets = secrets || {}
 
 		this.initActions()
 		this.initFeedbacks()
@@ -111,7 +114,7 @@ class PCOLiveInstance extends InstanceBase {
 		this.initPresets()
 
 		this.checkVariables()
-		this.checkFeedbacks()
+		this.checkAllFeedbacks()
 
 		this.updateStatus(InstanceStatus.Connecting)
 
@@ -126,7 +129,7 @@ class PCOLiveInstance extends InstanceBase {
 		this.initPCOLive()
 
 		//fill the plan picker's service type slots from the folder (the one already loaded, or the Parent Folder setting)
-		if ((this.picker.folderId || this.config.parentfolder) && this.config.applicationid && this.config.secretkey) {
+		if ((this.picker.folderId || this.config.parentfolder) && this.config.applicationid && this.getSecretKey()) {
 			this.loadPickerServiceTypes(this.picker.folderId)
 		}
 
@@ -147,5 +150,3 @@ class PCOLiveInstance extends InstanceBase {
 		this.lastPlanItemId = undefined
 	}
 }
-
-runEntrypoint(PCOLiveInstance, UpgradeScripts)

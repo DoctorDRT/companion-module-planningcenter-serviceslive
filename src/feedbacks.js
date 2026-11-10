@@ -1,6 +1,6 @@
-const { combineRgb } = require('@companion-module/base')
+import { combineRgb } from '@companion-module/base'
 
-const { graphics } = require('companion-module-utils')
+import { graphics } from 'companion-module-utils'
 
 async function personPhoto(person, returnStatus, options) {
 	if (person && person.photo) {
@@ -63,7 +63,7 @@ async function personPhoto(person, returnStatus, options) {
 	}
 }
 
-module.exports = {
+export default {
 	initFeedbacks() {
 		let self = this
 		const feedbacks = {}
@@ -136,6 +136,7 @@ module.exports = {
 		feedbacks.showPersonPhotoPositionName = {
 			name: 'Show Person Photo based on Position Name',
 			type: 'advanced',
+			affectedProperties: ['png64'],
 			options: [
 				{
 					type: 'dropdown',
@@ -158,6 +159,7 @@ module.exports = {
 		feedbacks.showPersonPhotoPositionNumber = {
 			name: 'Show Person Photo based on Position Number',
 			type: 'advanced',
+			affectedProperties: ['png64'],
 			options: [
 				{
 					type: 'number',
@@ -182,6 +184,7 @@ module.exports = {
 		feedbacks.showPersonPhotoPositionNameWithStatus = {
 			name: 'Show Person Photo based on Position Name (With Status)',
 			type: 'advanced',
+			affectedProperties: ['png64'],
 			options: [
 				{
 					type: 'dropdown',
@@ -233,6 +236,7 @@ module.exports = {
 		feedbacks.showPersonPhotoPositionNumberWithStatus = {
 			name: 'Show Person Photo based on Position Number (With Status)',
 			type: 'advanced',
+			affectedProperties: ['png64'],
 			options: [
 				{
 					type: 'number',
@@ -331,6 +335,7 @@ module.exports = {
 		feedbacks.showPersonPhotoPositionNumberByTeam = {
 			name: 'Show Person Photo based on Position Number by Team',
 			type: 'advanced',
+			affectedProperties: ['png64'],
 			options: [
 				{
 					type: 'dropdown',
@@ -369,6 +374,7 @@ module.exports = {
 		feedbacks.showPersonPhotoPositionNumberByTeamWithStatus = {
 			name: 'Show Person Photo based on Position Number by Team (With Status)',
 			type: 'advanced',
+			affectedProperties: ['png64'],
 			options: [
 				{
 					type: 'dropdown',
@@ -521,6 +527,7 @@ module.exports = {
 					label: 'Choose by',
 					id: 'mode',
 					default: 'slot',
+					disableAutoExpression: true,
 					choices: [
 						{ id: 'slot', label: 'Folder slot' },
 						{ id: 'specific', label: 'Specific service type' },

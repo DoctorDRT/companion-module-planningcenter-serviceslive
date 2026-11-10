@@ -1,6 +1,6 @@
-const { InstanceStatus } = require('@companion-module/base')
+import { InstanceStatus } from '@companion-module/base'
 
-module.exports = {
+export default {
 	initActions() {
 		let self = this // required to have reference to outer `this`
 		let actions = {}
@@ -221,8 +221,8 @@ module.exports = {
 				},
 			],
 			callback: async function (event) {
-				let serviceTypeId = await self.parseVariablesInString(event.options.servicetypeid)
-				let planId = await self.parseVariablesInString(event.options.planid)
+				let serviceTypeId = `${event.options.servicetypeid ?? ''}`.trim()
+				let planId = `${event.options.planid ?? ''}`.trim()
 
 				self
 					.takeControl(serviceTypeId, planId)
@@ -257,8 +257,8 @@ module.exports = {
 				},
 			],
 			callback: async function (event) {
-				let serviceTypeId = await self.parseVariablesInString(event.options.servicetypeid)
-				let planId = await self.parseVariablesInString(event.options.planid)
+				let serviceTypeId = `${event.options.servicetypeid ?? ''}`.trim()
+				let planId = `${event.options.planid ?? ''}`.trim()
 
 				self
 					.takeControl(serviceTypeId, planId)
@@ -293,8 +293,8 @@ module.exports = {
 				},
 			],
 			callback: async function (event) {
-				let serviceTypeId = await self.parseVariablesInString(event.options.servicetypeid)
-				let planId = await self.parseVariablesInString(event.options.planid)
+				let serviceTypeId = `${event.options.servicetypeid ?? ''}`.trim()
+				let planId = `${event.options.planid ?? ''}`.trim()
 
 				self
 					.takeControl(serviceTypeId, planId)
@@ -385,8 +385,8 @@ module.exports = {
 				},
 			],
 			callback: async function (event) {
-				let serviceTypeId = await self.parseVariablesInString(event.options.servicetypeid)
-				let planId = await self.parseVariablesInString(event.options.planid)
+				let serviceTypeId = `${event.options.servicetypeid ?? ''}`.trim()
+				let planId = `${event.options.planid ?? ''}`.trim()
 
 				self
 					.takeControl(serviceTypeId, planId)
@@ -420,8 +420,8 @@ module.exports = {
 				},
 			],
 			callback: async function (event) {
-				let serviceTypeId = await self.parseVariablesInString(event.options.servicetypeid)
-				let planId = await self.parseVariablesInString(event.options.planid)
+				let serviceTypeId = `${event.options.servicetypeid ?? ''}`.trim()
+				let planId = `${event.options.planid ?? ''}`.trim()
 
 				self
 					.releaseControl(serviceTypeId, planId)
@@ -557,10 +557,8 @@ module.exports = {
 				},
 			],
 			callback: async function (event) {
-				let planId = await self.parseVariablesInString(event.options.planid)
-				let serviceTypeId = event.options.servicetypeid
-					? await self.parseVariablesInString(event.options.servicetypeid)
-					: ''
+				let planId = `${event.options.planid ?? ''}`.trim()
+				let serviceTypeId = event.options.servicetypeid ? `${event.options.servicetypeid ?? ''}`.trim() : ''
 				if (!serviceTypeId) {
 					serviceTypeId = self.getServiceIdFromPlanId(planId)
 				}
@@ -668,7 +666,7 @@ module.exports = {
 				},
 			],
 			callback: async function (event) {
-				let folderId = await self.parseVariablesInString(`${event.options.folderid || ''}`)
+				let folderId = `${event.options.folderid || ''}`
 				self.loadPickerServiceTypes(folderId)
 			},
 		}
@@ -683,6 +681,7 @@ module.exports = {
 					label: 'Choose by',
 					id: 'mode',
 					default: 'slot',
+					disableAutoExpression: true,
 					choices: [
 						{ id: 'slot', label: 'Folder slot (from Load Service Types from Folder)' },
 						{ id: 'specific', label: 'Specific service type' },
@@ -709,7 +708,7 @@ module.exports = {
 			],
 			callback: async function (event) {
 				if (event.options.mode === 'specific') {
-					let serviceTypeId = await self.parseVariablesInString(`${event.options.servicetypeid}`)
+					let serviceTypeId = `${event.options.servicetypeid ?? ''}`.trim()
 					self.loadPickerPlans(serviceTypeId, false)
 				} else {
 					self.selectPickerServiceTypeSlot(parseInt(event.options.slot))

@@ -1,6 +1,6 @@
-const { Regex } = require('@companion-module/base')
+import { Regex } from '@companion-module/base'
 
-module.exports = {
+export default {
 	getConfigFields() {
 		return [
 			{
@@ -25,7 +25,7 @@ module.exports = {
 				width: 12,
 			},
 			{
-				type: 'textinput',
+				type: 'secret-text',
 				id: 'secretkey',
 				label: 'Secret Key',
 				width: 12,
@@ -95,8 +95,7 @@ module.exports = {
 				min: 1000,
 				max: 30000,
 				default: 3000,
-				required: true,
-				isVisible: (configValues) => configValues.polling == true,
+				isVisibleExpression: '$(options:polling)',
 			},
 			{
 				type: 'textinput',
@@ -104,7 +103,7 @@ module.exports = {
 				label: 'Automatically start polling the next plan of a specific service type id.',
 				width: 3,
 				default: '',
-				isVisible: (configValues) => configValues.polling == true,
+				isVisibleExpression: '$(options:polling)',
 			},
 			{
 				type: 'checkbox',

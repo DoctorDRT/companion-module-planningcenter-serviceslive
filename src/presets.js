@@ -1,6 +1,6 @@
-const { combineRgb } = require('@companion-module/base')
+import { combineRgb } from '@companion-module/base'
 
-const png64 = require('./png64')
+import png64 from './png64.js'
 
 async function generateImages(count) {
 	const imagePromises = Array.from({ length: count }, (_, i) => {
@@ -11,7 +11,7 @@ async function generateImages(count) {
 	return images
 }
 
-module.exports = {
+export default {
 	async initPresets() {
 		let self = this
 		let presets = []
@@ -445,7 +445,7 @@ module.exports = {
 
 		//now build them for team generic position number - sorted by team
 		//let's make 1-30
-		for (team in self.CHOICES_TEAMS) {
+		for (let team in self.CHOICES_TEAMS) {
 			let teamId = self.CHOICES_TEAMS[team].id
 			let teamName = self.CHOICES_TEAMS[team].label
 
@@ -838,6 +838,115 @@ module.exports = {
 			feedbacks: [],
 		}
 
-		this.setPresetDefinitions(presets)
+		const { structure, definitions } = toV2Presets(presets, {})
+		this.setPresetDefinitions(structure, definitions)
 	},
+}
+
+const SECTION_ORDER = ['Plan Picker', 'Current Item', 'Next Item']
+
+const slug = (str) =>
+	`${str}`
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '_')
+		.replace(/^_|_$/g, '')
+
+/* Converts the presets built above (v1 style, with a category on each) to a v2 simple preset */
+function toSimplePreset(preset) {
+	let style = { ...preset.style }
+	if (typeof style.text === 'string') {
+		style.text = style.text.replace(/\\n/g, '\n') //v1 presets used a literal \n for a new line
+	}
+	return {
+		type: 'simple',
+		name: preset.name || preset.label || '',
+		style: style,
+		steps: preset.steps || [{ down: [], up: [] }],
+		feedbacks: (preset.feedbacks || []).map((feedback) => ({
+			feedbackId: feedback.feedbackId,
+			options: feedback.options || {},
+			...(feedback.style ? { style: feedback.style } : {}),
+		})),
+	}
+}
+
+/*
+ * Builds the v2 preset structure: one section per category, and a group inside it for each 'text' header.
+ * Layered designs replace the simple preset with the same id as a pair of alternatives (layered first),
+ * so Companion versions that can't draw layered buttons still get the simple one.
+ */
+function toV2Presets(presets, layeredPresets) {
+	let definitions = {}
+	let sections = new Map() //category -> { groups: [{ name, description, presets: [] }] }
+
+	const getSection = (category) => {
+		if (!sections.has(category)) {
+			sections.set(category, { groups: [{ name: category, description: undefined, presets: [] }] })
+		}
+		return sections.get(category)
+	}
+
+	const add = (id, preset) => {
+		let category = preset.category || 'General'
+		let section = getSection(category)
+		let layered = layeredPresets[id]
+
+		if (layered) {
+			let { category: _ignored, ...layeredDefinition } = layered
+			definitions[id] = { type: 'alternatives', variants: [layeredDefinition, toSimplePreset(preset)] }
+		} else {
+			definitions[id] = toSimplePreset(preset)
+		}
+		section.groups[section.groups.length - 1].presets.push(id)
+	}
+
+	Object.keys(presets).forEach((key) => {
+		let preset = presets[key]
+		if (!preset) return
+
+		if (preset.type === 'text') {
+			//a header: start a new group in this section
+			getSection(preset.category).groups.push({ name: preset.name, description: preset.text, presets: [] })
+			return
+		}
+
+		let id = /^\d+$/.test(key) ? `preset_${key}` : key
+		add(id, preset)
+	})
+
+	//layered designs that have no simple preset counterpart
+	Object.keys(layeredPresets).forEach((id) => {
+		if (definitions[id]) return
+		let { category, ...layeredDefinition } = layeredPresets[id]
+		definitions[id] = layeredDefinition
+		let section = getSection(category || 'Plan Picker')
+		section.groups[0].presets.push(id)
+	})
+
+	let categories = Array.from(sections.keys()).sort((a, b) => {
+		let ia = SECTION_ORDER.indexOf(a)
+		let ib = SECTION_ORDER.indexOf(b)
+		return (ia === -1 ? SECTION_ORDER.length : ia) - (ib === -1 ? SECTION_ORDER.length : ib)
+	})
+
+	let structure = categories.map((category) => {
+		let groups = sections.get(category).groups.filter((group) => group.presets.length > 0)
+		let sectionId = slug(category)
+		if (groups.length === 1 && groups[0].name === category) {
+			return { id: sectionId, name: category, definitions: groups[0].presets }
+		}
+		return {
+			id: sectionId,
+			name: category,
+			definitions: groups.map((group, index) => ({
+				id: `${sectionId}_${index}_${slug(group.name)}`,
+				type: 'simple',
+				name: group.name,
+				...(group.description ? { description: group.description } : {}),
+				presets: group.presets,
+			})),
+		}
+	})
+
+	return { structure, definitions }
 }

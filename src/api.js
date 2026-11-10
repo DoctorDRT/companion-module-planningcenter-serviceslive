@@ -1,18 +1,23 @@
-const { InstanceStatus } = require('@companion-module/base')
+import { InstanceStatus } from '@companion-module/base'
 
 const baseAPIUrl = 'https://api.planningcenteronline.com/services/v2'
 
 const REST_TIMEOUT_MS = 15 * 1000
 const REST_MAX_RETRIES = 2 //retries after a 429 rate limit response
 
-const { Jimp } = require('jimp')
+import { Jimp } from 'jimp'
 
 //how often the slower-changing data is refreshed while polling (the live data itself follows the polling rate)
 const TEAM_POSITIONS_REFRESH_MS = 60 * 1000
 const ITEM_NOTE_CATEGORIES_REFRESH_MS = 5 * 60 * 1000
 const ITEM_NOTES_REFRESH_MS = 60 * 1000
 
-module.exports = {
+export default {
+	/* The Secret Key is kept in Companion's secrets store (older configs kept it in the normal config) */
+	getSecretKey: function () {
+		return (this.secrets && this.secrets.secretkey) || (this.config && this.config.secretkey) || ''
+	},
+
 	initPCOLive: function () {
 		let self = this
 
@@ -20,8 +25,8 @@ module.exports = {
 			if (
 				self.config.applicationid !== '' &&
 				self.config.applicationid !== undefined &&
-				self.config.secretkey !== '' &&
-				self.config.secretkey !== undefined
+				self.getSecretKey() !== '' &&
+				self.getSecretKey() !== undefined
 			) {
 				//get Organization info
 				let organization_url = `${baseAPIUrl}`
@@ -222,7 +227,7 @@ module.exports = {
 	doRest: async function (method, url, body) {
 		let self = this
 
-		if (!self.config.applicationid || !self.config.secretkey) {
+		if (!self.config.applicationid || !self.getSecretKey()) {
 			throw 'Invalid Application ID/Secret Key.'
 		}
 
@@ -230,7 +235,7 @@ module.exports = {
 			throw 'Invalid method'
 		}
 
-		const auth = Buffer.from(`${self.config.applicationid}:${self.config.secretkey}`).toString('base64')
+		const auth = Buffer.from(`${self.config.applicationid}:${self.getSecretKey()}`).toString('base64')
 		const headers = { Authorization: `Basic ${auth}`, Accept: 'application/json' }
 
 		let options = { method: method, headers: headers }
@@ -500,7 +505,7 @@ module.exports = {
 
 						//get the length of only the ones without type of header
 						let itemsWithoutHeader = items.filter(
-							(item) => item.attributes.item_type !== 'header' && item.type === 'Item'
+							(item) => item.attributes.item_type !== 'header' && item.type === 'Item',
 						)
 
 						if (itemsWithoutHeader) {
@@ -514,6 +519,7 @@ module.exports = {
 
 						self.currentState.dynamicVariables['plan_currentitem'] = item.attributes.title
 						self.currentState.dynamicVariables['plan_currentitem_time_length'] = timeLength_formatted
+						self.currentState.dynamicVariables['plan_currentitem_time_length_seconds'] = timeLength
 						self.currentState.dynamicVariables['plan_currentitem_time_started'] = timeStarted_formatted
 						self.currentState.dynamicVariables['plan_currentitem_time_shouldfinish'] =
 							dtTimeShouldFinish.toLocaleTimeString()
@@ -637,7 +643,7 @@ module.exports = {
 						(item) =>
 							item.attributes.item_type !== 'header' &&
 							item.type === 'Item' &&
-							item.attributes.service_position == 'pre'
+							item.attributes.service_position == 'pre',
 					)
 					let preServiceItemsLength = 0
 					if (preServiceItems) {
@@ -646,6 +652,7 @@ module.exports = {
 
 					self.currentState.dynamicVariables['plan_index'] = ''
 					self.currentState.dynamicVariables['plan_currentitem_time_length'] = '' //show the service time start here
+					self.currentState.dynamicVariables['plan_currentitem_time_length_seconds'] = 0
 					self.currentState.dynamicVariables['plan_currentitem_time_started'] = ''
 					self.currentState.dynamicVariables['plan_currentitem_time_shouldfinish'] = ''
 					self.currentState.dynamicVariables['plan_currentitem_time_remaining_seconds'] = ''
@@ -664,7 +671,7 @@ module.exports = {
 
 				self.updateStatus(InstanceStatus.Ok)
 				self.checkVariables()
-				self.checkFeedbacks()
+				self.checkAllFeedbacks()
 			}
 		} catch (error) {
 			self.log('error', 'Error processing LIVE data: ' + error)
@@ -698,7 +705,7 @@ module.exports = {
 				.doRest(
 					'GET',
 					`https://api.planningcenteronline.com/services/v2/service_types/${self.lastServiceTypeId}/item_note_categories`,
-					{}
+					{},
 				)
 				.then(function (result) {
 					// Process the result and assign to self.planItemNoteCategories for both currentitem and nextitem
@@ -710,7 +717,7 @@ module.exports = {
 					})
 					self.initVariables() //initialize the variables for the item note categories
 					self.checkVariables() //check the variables to update the UI
-					self.checkFeedbacks() //check the feedbacks to update the UI
+					self.checkAllFeedbacks() //check the feedbacks to update the UI
 					// Resolve the promise with the categories
 					resolve(result.data)
 				})
@@ -740,7 +747,7 @@ module.exports = {
 				.doRest(
 					'GET',
 					`https://api.planningcenteronline.com/services/v2/service_types/${self.lastServiceTypeId}/plans/${self.lastPlanId}/items/${itemId}/item_notes`,
-					{}
+					{},
 				)
 				.then(function (result) {
 					resolve(result.data)
@@ -867,7 +874,7 @@ module.exports = {
 				} else {
 					self.log(
 						'error',
-						'Cannot start polling because we do not know what plan is being controlled yet. Start controlling a plan first.'
+						'Cannot start polling because we do not know what plan is being controlled yet. Start controlling a plan first.',
 					)
 				}
 			} else {
@@ -1088,7 +1095,7 @@ module.exports = {
 			}
 
 			self.checkVariables()
-			self.checkFeedbacks()
+			self.checkAllFeedbacks()
 		} catch (error) {
 			self.log('warn', 'Error processing team positions: ' + error)
 		}
@@ -1113,7 +1120,7 @@ module.exports = {
 							p.photo = photo
 						}
 					})
-					self.checkFeedbacks()
+					self.checkAllFeedbacks()
 				}
 			})
 			.catch(function (message) {

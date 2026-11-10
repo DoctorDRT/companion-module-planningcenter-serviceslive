@@ -2,6 +2,7 @@
 	"name": "planningcenter-serviceslive",
 	"version": "2.7.0",
 	"main": "index.js",
+	"type": "module",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"format": "prettier --write ."
@@ -12,13 +13,17 @@
 	},
 	"license": "MIT",
 	"dependencies": {
-		"@companion-module/base": "^1.12.1",
+		"@companion-module/base": "~2.1.3",
 		"companion-module-utils": "^0.5.0",
 		"file-type": "^20.4.1",
 		"jimp": "^1.6.0"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.8.0",
-		"prettier": "^3.5.3"
-	}
+		"@companion-module/tools": "^3.2.0",
+		"prettier": "^3.8.1"
+	},
+	"engines": {
+		"node": "^22.20"
+	},
+	"prettier": "@companion-module/tools/.prettierrc.json"
 }

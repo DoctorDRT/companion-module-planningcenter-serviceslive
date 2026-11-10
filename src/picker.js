@@ -1,4 +1,4 @@
-const { InstanceStatus } = require('@companion-module/base')
+import { InstanceStatus } from '@companion-module/base'
 
 const baseAPIUrl = 'https://api.planningcenteronline.com/services/v2'
 
@@ -18,7 +18,7 @@ const PICKER_MAX_SERVICETYPE_SLOTS = 30
  *   2. "Plan Picker: Select Plan" (one button per slot, text = $(services-live:picker_plan_1_name) etc.)
  *   3. "Plan Picker: Take Control of Selected Plan"
  */
-module.exports = {
+export default {
 	getPickerSlotCount: function () {
 		let slots = parseInt(this.config?.picker_slots)
 		if (isNaN(slots) || slots < 1) {
@@ -101,7 +101,7 @@ module.exports = {
 				: ''
 		self.picker.loading = true
 		self.checkVariables()
-		self.checkFeedbacks()
+		self.checkAllFeedbacks()
 
 		let slots = self.getPickerSlotCount()
 		let plans_url = `${baseAPIUrl}/service_types/${serviceTypeId}/plans?filter=future&order=sort_date&per_page=${slots}&include=plan_times`
@@ -145,14 +145,14 @@ module.exports = {
 				self.picker.loading = false
 				self.startPickerRefresh()
 				self.checkVariables()
-				self.checkFeedbacks()
+				self.checkAllFeedbacks()
 			})
 			.catch(function (message) {
 				self.picker.loading = false
 				self.log('error', 'Plan Picker: error loading upcoming plans: ' + message)
 				self.updateStatus(InstanceStatus.ConnectionFailure, message)
 				self.checkVariables()
-				self.checkFeedbacks()
+				self.checkAllFeedbacks()
 			})
 	},
 
@@ -164,7 +164,7 @@ module.exports = {
 			this.log('debug', `Plan Picker: slot ${slot} has no plan loaded.`)
 		}
 		this.checkVariables()
-		this.checkFeedbacks()
+		this.checkAllFeedbacks()
 	},
 
 	stepPickerSelection: function (step) {
@@ -206,7 +206,7 @@ module.exports = {
 					self.getItemNoteCategories().catch(function () {})
 					self.getTeamPositions()
 					self.checkVariables()
-					self.checkFeedbacks()
+					self.checkAllFeedbacks()
 					self.startInterval()
 				})
 				.catch(function (message) {
@@ -234,7 +234,7 @@ module.exports = {
 					if (self.lastPlanId === plan.id) {
 						self.currentState.internal.liveController = null
 					}
-					self.checkFeedbacks()
+					self.checkAllFeedbacks()
 				})
 				.catch(function (message) {
 					self.log('error', 'Plan Picker: error releasing control: ' + message)
@@ -300,14 +300,14 @@ module.exports = {
 				}
 
 				self.checkVariables()
-				self.checkFeedbacks()
+				self.checkAllFeedbacks()
 			})
 			.catch(function (message) {
 				self.picker.serviceTypesLoading = false
 				self.log('error', 'Plan Picker: error loading service types: ' + message)
 				self.updateStatus(InstanceStatus.ConnectionFailure, message)
 				self.checkVariables()
-				self.checkFeedbacks()
+				self.checkAllFeedbacks()
 			})
 	},
 
@@ -349,7 +349,7 @@ module.exports = {
 		this.stopPickerRefresh()
 		this.initPickerState()
 		this.checkVariables()
-		this.checkFeedbacks()
+		this.checkAllFeedbacks()
 	},
 
 	startPickerRefresh: function () {
