@@ -383,7 +383,7 @@ export default {
 					self.lastServiceTypeId = serviceTypeId
 					self.lastPlanId = planId
 					self.processLiveData(result)
-					self.startInterval()
+					self.startInterval(false) //the response already had the new live data
 				})
 				.catch(function (message) {
 					self.log('error', 'Error Controlling LIVE: ' + message)
@@ -1001,7 +1001,12 @@ export default {
 		}
 	},
 
-	startInterval: function () {
+	/*
+	 * (Re)starts polling the followed plan. Polls once right away too (pollNow), so taking control or switching
+	 * plans shows up at once instead of after one polling interval. Pass false when fresh live data was just
+	 * processed (Next/Previous already get it back from PCO).
+	 */
+	startInterval: function (pollNow = true) {
 		let self = this
 
 		if (self.INTERVAL) {
@@ -1015,6 +1020,9 @@ export default {
 		try {
 			if (self.config.polling == true) {
 				if (self.lastServiceTypeId && self.lastPlanId) {
+					if (pollNow) {
+						self.getCurrentLive()
+					}
 					self.INTERVAL = setInterval(function () {
 						self.getCurrentLive()
 						self.getItemNoteCategories().catch(function (message) {
