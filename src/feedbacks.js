@@ -501,6 +501,54 @@ module.exports = {
 			pickerSlotChoices.push({ id: i, label: `Plan ${i}` })
 		}
 
+		let pickerServiceTypeSlotChoices = []
+		for (let i = 1; i <= self.getPickerServiceTypeSlotCount(); i++) {
+			pickerServiceTypeSlotChoices.push({ id: i, label: `Service Type ${i}` })
+		}
+
+		feedbacks.picker_servicetype_slot_selected = {
+			type: 'boolean',
+			name: 'Plan Picker: Service Type Slot is Selected',
+			defaultStyle: {
+				color: colorBlack,
+				bgcolor: combineRgb(255, 191, 0),
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Service Type Slot',
+					id: 'slot',
+					default: 1,
+					choices: pickerServiceTypeSlotChoices,
+				},
+			],
+			callback: async function (feedback) {
+				return self.getPickerSelectedServiceTypeSlot() === parseInt(feedback.options.slot)
+			},
+		}
+
+		feedbacks.picker_servicetype_slot_empty = {
+			type: 'boolean',
+			name: 'Plan Picker: Service Type Slot is Empty',
+			description: 'True when no service type is loaded in this slot. Useful for dimming unused buttons.',
+			defaultStyle: {
+				color: combineRgb(80, 80, 80),
+				bgcolor: colorBlack,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Service Type Slot',
+					id: 'slot',
+					default: 1,
+					choices: pickerServiceTypeSlotChoices,
+				},
+			],
+			callback: async function (feedback) {
+				return !self.picker.serviceTypes[parseInt(feedback.options.slot) - 1]
+			},
+		}
+
 		feedbacks.picker_servicetype_loaded = {
 			type: 'boolean',
 			name: 'Plan Picker: Service Type is Loaded',
