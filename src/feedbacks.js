@@ -583,6 +583,30 @@ export default {
 			},
 		}
 
+		feedbacks.picker_folder_loaded = {
+			type: 'boolean',
+			name: 'Plan Picker: Folder is Loaded',
+			description:
+				'True when the service type slots were last loaded from this folder. Useful for lighting up folder buttons.',
+			defaultStyle: {
+				color: colorBlack,
+				bgcolor: combineRgb(255, 191, 0),
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Folder',
+					id: 'folderid',
+					default: '',
+					allowCustom: true,
+					choices: self.getPickerFolderChoices(),
+				},
+			],
+			callback: async function (feedback) {
+				return `${feedback.options.folderid ?? ''}`.trim() === self.picker.sourceOverride
+			},
+		}
+
 		feedbacks.picker_plan_selected = {
 			type: 'boolean',
 			name: 'Plan Picker: Plan Slot is Selected',

@@ -71,6 +71,7 @@ export default class PCOLiveInstance extends InstanceBase {
 		this.INTERVAL = null
 		this.RESTART_TIMEOUT = null
 		this.PICKER_INTERVAL = null
+		this.PICKER_SERVICETYPES_INTERVAL = null
 
 		this.initPickerState()
 		this.ITEM_TIME_REMAINING_INTERVAL = null
@@ -121,6 +122,7 @@ export default class PCOLiveInstance extends InstanceBase {
 		this.stopInterval()
 		this.cancelRestart()
 		this.stopPickerRefresh()
+		this.stopPickerServiceTypesRefresh()
 
 		this.lastServiceTypeId = undefined
 		this.lastPlanId = undefined
@@ -128,14 +130,9 @@ export default class PCOLiveInstance extends InstanceBase {
 
 		this.initPCOLive()
 
-		//fill the plan picker's service type slots from the folder (the one already loaded, or the Parent Folder setting)
-		if ((this.picker.folderId || this.config.parentfolder) && this.config.applicationid && this.getSecretKey()) {
-			this.loadPickerServiceTypes(this.picker.folderId)
-		}
-
-		//if the plan picker already had a service type loaded, reload it with the new settings
-		if (this.picker.serviceTypeId) {
-			this.loadPickerPlans(this.picker.serviceTypeId, true)
+		//fill the plan picker's service type slots, then restore the last selection (see the Plan Picker settings)
+		if (this.config.applicationid && this.getSecretKey()) {
+			this.startPicker()
 		}
 	}
 
@@ -144,6 +141,7 @@ export default class PCOLiveInstance extends InstanceBase {
 		this.stopInterval()
 		this.cancelRestart()
 		this.stopPickerRefresh()
+		this.stopPickerServiceTypesRefresh()
 
 		this.lastServiceTypeId = undefined
 		this.lastPlanId = undefined

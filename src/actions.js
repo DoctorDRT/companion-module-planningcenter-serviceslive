@@ -654,19 +654,20 @@ export default {
 		actions.picker_load_servicetypes = {
 			name: 'Plan Picker: Load Service Types from Folder',
 			description:
-				'Loads the service types in a PCO folder into the picker_servicetype_N variables, in the same order as PCO. Leave the folder blank to use the Parent Folder from the connection settings (or all service types).',
+				'Fills the service type slots from a PCO folder, in the same order as PCO. "Default" goes back to the Plan Picker settings for this connection. You can also type a folder id.',
 			options: [
 				{
-					type: 'textinput',
-					label: 'PCO Folder Id',
+					type: 'dropdown',
+					label: 'Folder',
 					id: 'folderid',
 					default: '',
-					useVariables: true,
-					tooltip: 'The folder id is in the URL when you open the folder in PCO Services.',
+					allowCustom: true,
+					choices: self.getPickerFolderChoices(),
+					tooltip: 'Pick a folder, or type its id (it is in the address bar when you open the folder in PCO Services).',
 				},
 			],
 			callback: async function (event) {
-				let folderId = `${event.options.folderid || ''}`
+				let folderId = `${event.options.folderid ?? ''}`.trim()
 				self.loadPickerServiceTypes(folderId)
 			},
 		}

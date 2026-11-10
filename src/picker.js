@@ -5,6 +5,7 @@ const baseAPIUrl = 'https://api.planningcenteronline.com/services/v2'
 const PICKER_DEFAULT_SLOTS = 4
 const PICKER_MAX_SLOTS = 10
 const PICKER_REFRESH_MS = 5 * 60 * 1000 //reload the upcoming plans list every 5 minutes
+const PICKER_SERVICETYPES_REFRESH_MS = 15 * 60 * 1000 //reload the service type slots every 15 minutes
 const PICKER_DEFAULT_SERVICETYPE_SLOTS = 8
 const PICKER_MAX_SERVICETYPE_SLOTS = 30
 
@@ -37,6 +38,7 @@ export default {
 
 	initPickerState: function () {
 		this.picker = {
+			sourceOverride: '', //'' = the source in the connection settings, '0' = every service type, otherwise a folder id
 			folderId: '',
 			folderName: '',
 			serviceTypes: [], //[{ id, name }] - the service types loaded from a folder, in PCO's order
@@ -47,6 +49,15 @@ export default {
 			selectedPlanId: '',
 			loading: false,
 		}
+		this.pickerFolders = [] //[{ id, name }] - every folder in PCO Services, for the Load Service Types dropdown
+	},
+
+	/* Comma, space or newline separated service type ids from a connection setting, in the order given */
+	parsePickerIdList: function (value) {
+		return `${value || ''}`
+			.split(/[\s,;]+/)
+			.map((id) => id.trim())
+			.filter((id) => id !== '')
 	},
 
 	getPickerSelectedSlot: function () {
@@ -72,7 +83,7 @@ export default {
 			.join(', ')
 	},
 
-	loadPickerPlans: function (serviceTypeId, keepSelection) {
+	loadPickerPlans: function (serviceTypeId, keepSelection, preferPlanId) {
 		let self = this
 
 		serviceTypeId = `${serviceTypeId || ''}`.trim()
@@ -89,6 +100,9 @@ export default {
 			self.picker.plans = []
 			self.picker.selectedPlanId = ''
 			previousSelection = ''
+		}
+		if (preferPlanId) {
+			previousSelection = `${preferPlanId}` //select this plan if it is still upcoming (used when restoring the last selection)
 		}
 
 		self.picker.serviceTypeId = serviceTypeId
@@ -144,6 +158,7 @@ export default {
 
 				self.picker.loading = false
 				self.startPickerRefresh()
+				self.savePickerSelection()
 				self.checkVariables()
 				self.checkAllFeedbacks()
 			})
@@ -160,6 +175,7 @@ export default {
 		let plan = this.picker.plans[slot - 1]
 		if (plan) {
 			this.picker.selectedPlanId = plan.id
+			this.savePickerSelection()
 		} else {
 			this.log('debug', `Plan Picker: slot ${slot} has no plan loaded.`)
 		}
@@ -255,47 +271,82 @@ export default {
 	},
 
 	/*
-	 * Loads the service types in a PCO folder into the picker's service type slots.
-	 * With no folder id, uses the connection's Parent Folder setting, or every service type if that is blank too.
+	 * Fills the picker's service type slots.
+	 *   folderId blank: the source in the connection settings (the Parent Folder, every service type, or the listed ids)
+	 *   folderId 0:     every service type
+	 *   any other id:   the service types in that folder, in PCO's order
+	 * Service types in the "Hide" setting are always left out, except from the listed ids.
 	 */
 	loadPickerServiceTypes: function (folderId) {
 		let self = this
 
-		folderId = `${folderId || ''}`.trim() || `${self.config?.parentfolder || ''}`.trim()
+		let sourceOverride = `${folderId ?? ''}`.trim()
+		let listIds = []
+		let resolvedFolderId = ''
 
-		let url = `${baseAPIUrl}/service_types?order=sequence&per_page=100`
-		if (folderId) {
-			url += `&where[parent_id]=${encodeURIComponent(folderId)}`
+		if (sourceOverride === '') {
+			if (self.config?.picker_source === 'list') {
+				listIds = self.parsePickerIdList(self.config.picker_servicetype_list)
+			} else {
+				resolvedFolderId = self.getParentFolderId()
+			}
+		} else if (sourceOverride !== '0') {
+			resolvedFolderId = sourceOverride
 		}
 
-		self.picker.folderId = folderId
-		self.picker.folderName = folderId ? self.picker.folderName : ''
+		let url = `${baseAPIUrl}/service_types?order=sequence&per_page=100`
+		if (resolvedFolderId) {
+			url += `&where[parent_id]=${encodeURIComponent(resolvedFolderId)}`
+		}
+
+		self.picker.sourceOverride = sourceOverride
+		self.picker.folderId = resolvedFolderId
+		self.picker.folderName = resolvedFolderId
+			? (self.pickerFolders.find((f) => f.id === resolvedFolderId) || {}).name || self.picker.folderName
+			: listIds.length > 0
+				? 'My List'
+				: 'All Service Types'
 		self.picker.serviceTypesLoading = true
 		self.checkVariables()
 
-		let folderPromise = Promise.resolve(null)
-		if (folderId) {
+		let folderPromise = Promise.resolve(self.picker.folderName)
+		if (resolvedFolderId) {
 			folderPromise = self
-				.doRest('GET', `${baseAPIUrl}/folders/${encodeURIComponent(folderId)}`, {})
+				.doRest('GET', `${baseAPIUrl}/folders/${encodeURIComponent(resolvedFolderId)}`, {})
 				.then((result) => (result.data && result.data.attributes ? result.data.attributes.name : ''))
 				.catch(() => '') //the folder name is just a nice-to-have
 		}
 
-		return Promise.all([self.doRest('GET', url, {}), folderPromise])
+		let loadId = (self.pickerServiceTypesLoadId = (self.pickerServiceTypesLoadId || 0) + 1)
+
+		return Promise.all([self.getAllPages(url), folderPromise])
 			.then(function ([result, folderName]) {
-				if (self.picker.folderId !== folderId) {
-					return //a different folder was requested while this one was loading
+				if (self.pickerServiceTypesLoadId !== loadId) {
+					return //a different source was requested while this one was loading
 				}
 
-				let data = Array.isArray(result.data) ? result.data : result.data ? [result.data] : []
-				self.picker.serviceTypes = data.map((st) => ({ id: st.id, name: st.attributes.name || '' }))
-				self.picker.folderName = folderName || ''
+				let all = (result.data || []).map((st) => ({ id: `${st.id}`, name: st.attributes?.name || '' }))
+				let serviceTypes
+				if (listIds.length > 0) {
+					//the listed ids, in the order they were listed
+					serviceTypes = listIds.map((id) => all.find((st) => st.id === id)).filter((st) => st)
+					let missing = listIds.filter((id) => !all.find((st) => st.id === id))
+					if (missing.length > 0) {
+						self.log('warn', `Plan Picker: these listed service type ids were not found in PCO: ${missing.join(', ')}`)
+					}
+				} else {
+					let hidden = self.parsePickerIdList(self.config?.picker_servicetype_hide)
+					serviceTypes = all.filter((st) => !hidden.includes(st.id))
+				}
+
+				self.picker.serviceTypes = serviceTypes
+				self.picker.folderName = folderName || self.picker.folderName
 				self.picker.serviceTypesLoading = false
 
 				if (self.picker.serviceTypes.length > self.getPickerServiceTypeSlotCount()) {
 					self.log(
 						'info',
-						`Plan Picker: folder has ${self.picker.serviceTypes.length} service types, but only ${self.getPickerServiceTypeSlotCount()} service type slots are set in the connection config.`,
+						`Plan Picker: found ${self.picker.serviceTypes.length} service types, but only ${self.getPickerServiceTypeSlotCount()} service type slots are set in the connection config.`,
 					)
 				}
 
@@ -303,12 +354,105 @@ export default {
 				self.checkAllFeedbacks()
 			})
 			.catch(function (message) {
+				if (self.pickerServiceTypesLoadId !== loadId) {
+					return
+				}
 				self.picker.serviceTypesLoading = false
 				self.log('error', 'Plan Picker: error loading service types: ' + message)
 				self.updateStatus(InstanceStatus.ConnectionFailure, message)
 				self.checkVariables()
 				self.checkAllFeedbacks()
 			})
+	},
+
+	/* Choices for the folder dropdown: the connection's default, every service type, then each PCO folder */
+	getPickerFolderChoices: function () {
+		return [
+			{ id: '', label: 'Default (Plan Picker settings)' },
+			{ id: '0', label: 'All service types' },
+			...(this.pickerFolders || []).map((f) => ({ id: f.id, label: f.name })),
+		]
+	},
+
+	/* Loads every Services folder, for the folder dropdown on "Load Service Types" and the folder presets */
+	loadPickerFolders: function () {
+		let self = this
+		return self
+			.getAllPages(`${baseAPIUrl}/folders?per_page=100&order=name`)
+			.then(function (result) {
+				self.pickerFolders = (result.data || []).map((f) => ({
+					id: `${f.id}`,
+					name: f.attributes?.name || `Folder ${f.id}`,
+				}))
+				//the folder dropdowns and folder presets changed
+				self.initActions()
+				self.initFeedbacks()
+				self.initPresets()
+				self.checkAllFeedbacks()
+			})
+			.catch(function (message) {
+				self.log('warn', 'Plan Picker: could not load the folder list: ' + message)
+			})
+	},
+
+	/*
+	 * Runs when the connection starts: loads the folders and the service type slots, then picks the service type
+	 * the connection settings ask for (the last one used, or slot 1) if nothing is selected yet.
+	 */
+	startPicker: function () {
+		let self = this
+		self.loadPickerFolders()
+		self.startPickerServiceTypesRefresh()
+
+		//the settings may have changed, so go back to the source they name (a Load button can still pick another)
+		return self.loadPickerServiceTypes('').then(function () {
+			if (self.picker.serviceTypeId) {
+				self.loadPickerPlans(self.picker.serviceTypeId, true) //reload it with the new settings
+				return
+			}
+
+			let startup = self.config?.picker_startup || 'last'
+			let lastServiceTypeId = `${self.config?.picker_last_servicetype_id || ''}`.trim()
+			if (startup === 'last' && lastServiceTypeId) {
+				let saved = self.picker.serviceTypes.find((st) => st.id === lastServiceTypeId)
+				self.picker.serviceTypeName = saved ? saved.name : ''
+				self.loadPickerPlans(lastServiceTypeId, false, self.config?.picker_last_plan_id)
+			} else if (startup === 'first' || startup === 'last') {
+				//'last' with nothing saved yet starts on slot 1 too
+				if (self.picker.serviceTypes.length > 0) {
+					self.selectPickerServiceTypeSlot(1)
+				}
+			}
+		})
+	},
+
+	startPickerServiceTypesRefresh: function () {
+		let self = this
+		self.stopPickerServiceTypesRefresh()
+		self.PICKER_SERVICETYPES_INTERVAL = setInterval(function () {
+			self.loadPickerServiceTypes(self.picker.sourceOverride)
+		}, PICKER_SERVICETYPES_REFRESH_MS)
+	},
+
+	stopPickerServiceTypesRefresh: function () {
+		if (this.PICKER_SERVICETYPES_INTERVAL) {
+			clearInterval(this.PICKER_SERVICETYPES_INTERVAL)
+			this.PICKER_SERVICETYPES_INTERVAL = null
+		}
+	},
+
+	/* Saves the selected service type and plan in the connection config, so they come back after a restart */
+	savePickerSelection: function () {
+		if (!this.config) {
+			return
+		}
+		let serviceTypeId = this.picker.serviceTypeId || ''
+		let planId = this.picker.selectedPlanId || ''
+		if (this.config.picker_last_servicetype_id === serviceTypeId && this.config.picker_last_plan_id === planId) {
+			return
+		}
+		this.config = { ...this.config, picker_last_servicetype_id: serviceTypeId, picker_last_plan_id: planId }
+		this.saveConfig(this.config, undefined) //companion does not call configUpdated for this
 	},
 
 	/* 1-based slot of the selected service type in the loaded service types, 0 when it isn't one of them */
@@ -346,8 +490,11 @@ export default {
 	},
 
 	clearPicker: function () {
+		let folders = this.pickerFolders
 		this.stopPickerRefresh()
 		this.initPickerState()
+		this.pickerFolders = folders
+		this.savePickerSelection()
 		this.checkVariables()
 		this.checkAllFeedbacks()
 	},

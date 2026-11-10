@@ -14,6 +14,12 @@ const ITEM_NOTES_REFRESH_MS = 60 * 1000
 
 export default {
 	/* The Secret Key is kept in Companion's secrets store (older configs kept it in the normal config) */
+	/* The Parent Folder setting, or '' for no folder. 0 also means no folder (every service type) */
+	getParentFolderId: function () {
+		let folderId = `${(this.config && this.config.parentfolder) || ''}`.trim()
+		return folderId === '0' ? '' : folderId
+	},
+
 	getSecretKey: function () {
 		return (this.secrets && this.secrets.secretkey) || (this.config && this.config.secretkey) || ''
 	},
@@ -55,8 +61,8 @@ export default {
 					let serviceTypeId = self.config.servicetypeid
 					services_url += `/${serviceTypeId}`
 					self.lastServiceTypeId = serviceTypeId
-				} else if (self.config.parentfolder) {
-					services_url += `?where[parent_id]=${self.config.parentfolder}`
+				} else if (self.getParentFolderId()) {
+					services_url += `?where[parent_id]=${encodeURIComponent(self.getParentFolderId())}`
 				}
 
 				//start from empty lists, otherwise every reconnect would add the same plans again

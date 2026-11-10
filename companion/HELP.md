@@ -42,20 +42,24 @@ The settings are grouped into sections, each with a heading.
 
 **Which plans to show** (all optional)
 
-| Setting                | What it does                                                                                                        |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Parent Folder ID       | Only list service types inside this PCO folder. The Plan Picker also fills its service type slots from this folder. |
-| Service Type ID        | Only list plans from this one service type.                                                                         |
-| Plans per Service Type | How many upcoming plans to list for each service type in the action dropdowns. Default is 7.                        |
+| Setting                | What it does                                                                                                                                             |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Parent Folder ID       | Only list service types inside this PCO folder. The Plan Picker also fills its service type slots from this folder. Blank or 0 means every service type. |
+| Service Type ID        | Only list plans from this one service type.                                                                                                              |
+| Plans per Service Type | How many upcoming plans to list for each service type in the action dropdowns. Default is 7.                                                             |
 
 **Finding an id:** open the folder or service type in PCO Services in your browser and look at the address bar. The number after `folders/` or `service_types/` is the id. For example, in `services.planningcenteronline.com/service_types/123456` the service type id is `123456`.
 
 **Plan Picker**
 
-| Setting                    | What it does                                                              |
-| -------------------------- | ------------------------------------------------------------------------- |
-| Service Type Slots (1-30)  | How many service types from the folder get their own slot. Default is 8.  |
-| Upcoming Plan Slots (1-10) | How many upcoming plans load for the selected service type. Default is 4. |
+| Setting                      | What it does                                                                                                                                                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Service Type Slots Come From | **Parent Folder** fills the slots from the Parent Folder ID above (blank or 0 means every service type). **Only the IDs I list** shows exactly the service types you enter.                |
+| When the Connection Starts   | **Select the last one used** (default) brings back the service type and plan you had selected. **Select service type slot 1** always starts on slot 1. **Select nothing** leaves it empty. |
+| Service Type IDs to Show     | Shown with "Only the IDs I list". Service type ids separated by commas. Slot 1 is the first id, slot 2 the second, and so on.                                                              |
+| Service Type IDs to Hide     | Shown with "Parent Folder". Service types that never get a slot or a preset, for example test service types only you use.                                                                  |
+| Service Type Slots (1-30)    | How many service types get their own slot. Default is 8.                                                                                                                                   |
+| Upcoming Plan Slots (1-10)   | How many upcoming plans load for the selected service type. Default is 4.                                                                                                                  |
 
 **Live updates (polling)**
 
@@ -77,7 +81,7 @@ The settings are grouped into sections, each with a heading.
 
 The Plan Picker lets an operator choose a service type, see its next few plans on buttons, pick one, and take control, without editing any buttons.
 
-1. Set **Parent Folder ID** in the connection settings to the PCO folder that holds your service types (for example, your Sunday services folder).
+1. In the connection settings, choose which service types get a slot: set **Parent Folder ID** to a PCO folder (or leave it blank for every service type), or switch **Service Type Slots Come From** to **Only the IDs I list** and enter the ids you want.
 2. Open the **Presets** tab, choose this connection, and open the **Plan Picker** section.
 3. Drag these onto a page:
    - **Select Service Type 1, 2, 3...** (one per service type you want to see)
@@ -94,9 +98,11 @@ What the buttons show:
 - **Plan buttons** show the date, plan name and service times. The selected plan gets an amber border, and the plan you are controlling shows a green **IN CONTROL** badge.
 - **Take Control** is red until you are in control, then turns green.
 
-The service type slots load automatically when the connection starts (if Parent Folder ID is set). The plan list refreshes itself every 5 minutes, and you can refresh it right away with **Plan Picker: Refresh Upcoming Plans**.
+Everything loads by itself when the connection starts, and the last service type and plan you picked come back after a restart. The service type slots refresh every 15 minutes and the plan list every 5 minutes. To refresh right away, press a Load button or use **Plan Picker: Refresh Upcoming Plans**.
 
-Want a different folder on one page? Use **Plan Picker: Load Service Types from Folder** with a folder id on a button. Leave the id blank to go back to the Parent Folder from the settings.
+**Slot buttons or specific buttons?** A slot button shows whatever service type is in that slot, so it can change if the list changes. A **Specific Service Types** preset always selects the same service type, wherever it sits. Use whichever fits. The selection always follows the service type itself, so a refresh never swaps what you picked.
+
+**Switching folders from the deck:** the **Folders** presets have one button per PCO folder plus **All Service Types**. Pressing one fills the slots from that folder, and the button turns amber while that folder is loaded. The plain **Load Service Types from Folder** button goes back to the connection settings.
 
 ---
 
@@ -119,17 +125,17 @@ Most actions come in a few versions. Pick the one that matches how you work:
 
 #### Plan Picker
 
-| Action                            | What it does                                                                                                                                                                          |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Load Service Types from Folder    | Fills the service type slots with the service types in a folder, in PCO's order. Blank folder id uses the Parent Folder setting.                                                      |
-| Select Service Type               | Selects a service type and loads its upcoming plans. **Choose by**: _Folder slot_ (slot 1, 2, 3...) or _Specific service type_ (pick from the list or type an id, variables allowed). |
-| Select Next/Previous Service Type | Steps through the folder slots.                                                                                                                                                       |
-| Refresh Upcoming Plans            | Reloads the plans for the selected service type now.                                                                                                                                  |
-| Select Plan                       | Selects plan slot 1, 2, 3... (1 is the soonest).                                                                                                                                      |
-| Select Next/Previous Plan         | Steps through the plan slots.                                                                                                                                                         |
-| Take Control of Selected Plan     | Takes control of the selected plan in PCO Live and makes the variables follow it.                                                                                                     |
-| Release Control of Selected Plan  | Releases control of the selected plan.                                                                                                                                                |
-| Clear                             | Clears the picker's service type, plans and selection.                                                                                                                                |
+| Action                            | What it does                                                                                                                                                                                  |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Load Service Types from Folder    | Fills the service type slots from a folder, picked from a list of your PCO folders (or type an id). **Default** goes back to the Plan Picker settings, **All service types** loads every one. |
+| Select Service Type               | Selects a service type and loads its upcoming plans. **Choose by**: _Folder slot_ (slot 1, 2, 3...) or _Specific service type_ (pick from the list or type an id, variables allowed).         |
+| Select Next/Previous Service Type | Steps through the folder slots.                                                                                                                                                               |
+| Refresh Upcoming Plans            | Reloads the plans for the selected service type now.                                                                                                                                          |
+| Select Plan                       | Selects plan slot 1, 2, 3... (1 is the soonest).                                                                                                                                              |
+| Select Next/Previous Plan         | Steps through the plan slots.                                                                                                                                                                 |
+| Take Control of Selected Plan     | Takes control of the selected plan in PCO Live and makes the variables follow it.                                                                                                             |
+| Release Control of Selected Plan  | Releases control of the selected plan.                                                                                                                                                        |
+| Clear                             | Clears the picker's service type, plans and selection.                                                                                                                                        |
 
 #### Running a plan
 
@@ -167,6 +173,7 @@ To advance whatever plan the picker is controlling, use **Go to Next Item of a S
 | Plan Item Time Overrun                     | The current item has run past its length.                                                                       |
 | Show Person Status                         | A scheduled person has a given status (confirmed, declined...).                                                 |
 | Show Person Photo (several versions)       | Puts a scheduled person's photo on the button, by position name or number, optionally per team and with status. |
+| Plan Picker: Folder is Loaded              | The service type slots were last loaded from this folder.                                                       |
 | Plan Picker: Service Type is Selected      | A folder slot or specific service type is the selected one.                                                     |
 | Plan Picker: Service Type Slot is Empty    | That service type slot has nothing loaded.                                                                      |
 | Plan Picker: Plan Slot is Selected         | That plan slot is the selected plan.                                                                            |
@@ -231,7 +238,7 @@ Open the **Variables** tab in Companion to see the exact names for your teams.
 
 Presets are in the **Presets** tab under this connection:
 
-- **Plan Picker**: Load Folder, service type slots, a button for each service type the connection knows about, plan slots, and Take/Release Control.
+- **Plan Picker**, in groups: Specific Service Types (one button per service type), Folders (one Load button per folder), Service Type Slots, Upcoming Plans, and Control (Take/Release).
 - **Current Item**: current item name, time remaining, countdown gauge and more.
 - **Next Item**: next item name, length and key.
 - **Scheduled People**: photo and status buttons for each scheduled position, generic and per team.
@@ -244,7 +251,7 @@ The Plan Picker and countdown presets use Companion 5's layered button designs. 
 
 - **Status shows an error or "Connecting" never finishes:** check the Application ID and Secret Key, and that the token's PCO account can use Services. Turn on Verbose Logging and look at the connection's log.
 - **The action dropdowns are empty:** the plans load when the connection starts. Check the Parent Folder ID and Service Type ID settings, or clear them to see everything.
-- **The service type slots are empty:** set Parent Folder ID, or press a **Load Service Types from Folder** button with a folder id.
+- **The service type slots are empty:** check the Plan Picker settings. With "Only the IDs I list", make sure the ids are right (the log names any it can't find). With a Parent Folder ID, make sure the folder has service types in it.
 - **Variables don't change when I take control:** use the Plan Picker's Take Control, or add **Set Plan Id for Polling** to your button.
 - **"Rate limited" in the log:** slow the Polling Rate down. 3000 ms or slower is recommended.
 - **Updating from an older version:** your buttons and Secret Key move over automatically the first time the new version starts. Export your Companion config before updating, just in case.

@@ -671,9 +671,16 @@ export default {
 		const pickerAmber = combineRgb(255, 191, 0)
 		const pickerGreen = combineRgb(0, 153, 51)
 
+		presets.picker_header_specific = {
+			type: 'text',
+			category: pickerCategory,
+			name: 'Specific Service Types',
+			text: 'Each button always selects the same service type, whatever slot it is in.',
+		}
+		const hiddenServiceTypes = self.parsePickerIdList(self.config?.picker_servicetype_hide)
 		for (let i = 0; i < self.currentState.internal.services_list.length; i++) {
 			let service = self.currentState.internal.services_list[i]
-			if (!service.id) {
+			if (!service.id || hiddenServiceTypes.includes(`${service.id}`)) {
 				continue
 			}
 			presets[`picker_servicetype_${service.id}`] = {
@@ -707,6 +714,12 @@ export default {
 			}
 		}
 
+		presets.picker_header_folders = {
+			type: 'text',
+			category: pickerCategory,
+			name: 'Folders',
+			text: 'Fill the service type slots from a folder. The amber button is the folder that is loaded.',
+		}
 		presets.picker_load_servicetypes = {
 			type: 'button',
 			category: pickerCategory,
@@ -723,9 +736,50 @@ export default {
 					up: [],
 				},
 			],
-			feedbacks: [],
+			feedbacks: [
+				{
+					feedbackId: 'picker_folder_loaded',
+					options: { folderid: '' },
+					style: { color: combineRgb(0, 0, 0), bgcolor: pickerAmber },
+				},
+			],
 		}
 
+		//one Load button per PCO folder, plus one for every service type
+		const folderPresets = [{ id: '0', name: 'All Service Types' }, ...(self.pickerFolders || [])]
+		for (let folder of folderPresets) {
+			presets[`picker_load_folder_${folder.id}`] = {
+				type: 'button',
+				category: pickerCategory,
+				name: `Load Folder: ${folder.name}`,
+				style: {
+					text: folder.name,
+					size: 'auto',
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(0, 0, 0),
+				},
+				steps: [
+					{
+						down: [{ actionId: 'picker_load_servicetypes', options: { folderid: folder.id } }],
+						up: [],
+					},
+				],
+				feedbacks: [
+					{
+						feedbackId: 'picker_folder_loaded',
+						options: { folderid: folder.id },
+						style: { color: combineRgb(0, 0, 0), bgcolor: pickerAmber },
+					},
+				],
+			}
+		}
+
+		presets.picker_header_slots = {
+			type: 'text',
+			category: pickerCategory,
+			name: 'Service Type Slots',
+			text: 'Slot buttons show whichever service type is in that slot.',
+		}
 		for (let i = 1; i <= self.getPickerServiceTypeSlotCount(); i++) {
 			presets[`picker_servicetype_slot_${i}`] = {
 				type: 'button',
@@ -758,6 +812,12 @@ export default {
 			}
 		}
 
+		presets.picker_header_plans = {
+			type: 'text',
+			category: pickerCategory,
+			name: 'Upcoming Plans',
+			text: 'Plan 1 is the soonest. The amber border shows the selected plan.',
+		}
 		for (let i = 1; i <= self.getPickerSlotCount(); i++) {
 			presets[`picker_plan_${i}`] = {
 				type: 'button',
@@ -795,6 +855,12 @@ export default {
 			}
 		}
 
+		presets.picker_header_control = {
+			type: 'text',
+			category: pickerCategory,
+			name: 'Control',
+			text: 'Take or release control of the selected plan.',
+		}
 		presets.picker_take_control = {
 			type: 'button',
 			category: pickerCategory,
