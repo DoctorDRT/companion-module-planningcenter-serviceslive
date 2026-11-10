@@ -207,8 +207,16 @@ export function getLayeredPresets(self) {
 		type: 'layered',
 		name: 'Load Service Types from Folder',
 		keywords: ['folder', 'service type', 'picker', 'load'],
+		localVariables: [
+			{
+				variableType: 'feedback',
+				variableName: 'loaded',
+				feedbackId: 'picker_folder_loaded',
+				options: { folderid: '' },
+			},
+		],
 		elements: [
-			background(COLORS.panel),
+			background(COLORS.panel, 'loaded'),
 			text('label', 'Label', 'LOAD FOLDER', { x: 4, y: 6, width: 92, height: 18 }, { color: COLORS.muted }),
 			text('folder', 'Folder Name', v('picker_folder_name'), { x: 4, y: 26, width: 92, height: 44 }),
 			text(
@@ -221,6 +229,73 @@ export function getLayeredPresets(self) {
 		],
 		steps: steps([{ actionId: 'picker_load_servicetypes', options: { folderid: '' } }]),
 		feedbacks: [],
+	}
+
+	/* ---- Plan Picker: one button per folder (plus every service type), lit while that folder is loaded ---- */
+	const folderButtons = [{ id: '0', name: 'All Service Types' }, ...(self.pickerFolders || [])]
+	for (let folder of folderButtons) {
+		presets[`picker_load_folder_${folder.id}`] = {
+			type: 'layered',
+			name: `Load Folder: ${folder.name}`,
+			keywords: ['folder', 'service type', 'picker', 'load'],
+			localVariables: [
+				{
+					variableType: 'feedback',
+					variableName: 'loaded',
+					feedbackId: 'picker_folder_loaded',
+					options: { folderid: folder.id },
+				},
+			],
+			elements: [
+				background(COLORS.panel, 'loaded'),
+				text(
+					'label',
+					'Label',
+					'FOLDER',
+					{ x: 6, y: 6, width: 88, height: 16 },
+					{ color: expr(`$(local:loaded) ? ${COLORS.amber} : ${COLORS.muted}`) },
+				),
+				text('name', 'Folder Name', folder.name, { x: 6, y: 24, width: 88, height: 70 }),
+			],
+			steps: steps([{ actionId: 'picker_load_servicetypes', options: { folderid: folder.id } }]),
+			feedbacks: [],
+		}
+	}
+
+	/* ---- Plan Picker: one button per service type, always selecting that service type ---- */
+	const hiddenServiceTypes = self.parsePickerIdList(self.config?.picker_servicetype_hide)
+	for (let service of self.currentState?.internal?.services_list || []) {
+		if (!service.id || hiddenServiceTypes.includes(`${service.id}`)) {
+			continue
+		}
+		presets[`picker_servicetype_${service.id}`] = {
+			type: 'layered',
+			name: `Load ${service.label}`,
+			keywords: ['service type', 'picker', 'select'],
+			localVariables: [
+				{
+					variableType: 'feedback',
+					variableName: 'selected',
+					feedbackId: 'picker_servicetype_selected',
+					options: { mode: 'specific', slot: 1, servicetypeid: service.id },
+				},
+			],
+			elements: [
+				background(COLORS.background, 'selected'),
+				text(
+					'label',
+					'Label',
+					'SERVICE TYPE',
+					{ x: 6, y: 6, width: 88, height: 16 },
+					{ color: expr(`$(local:selected) ? ${COLORS.amber} : ${COLORS.muted}`) },
+				),
+				text('name', 'Service Type Name', service.label, { x: 6, y: 24, width: 88, height: 70 }),
+			],
+			steps: steps([
+				{ actionId: 'picker_select_servicetype', options: { mode: 'specific', slot: 1, servicetypeid: service.id } },
+			]),
+			feedbacks: [],
+		}
 	}
 
 	/* ---- Plan Picker: service type slots ---- */
