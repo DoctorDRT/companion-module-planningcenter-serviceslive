@@ -494,7 +494,14 @@ export default {
 					id: `${planId}`,
 					fetchedAt: Date.now(),
 					loading: false,
-					name: attributes.title || attributes.series_title || '',
+					//many plans have no title or series, so fall back to the service type name, then the date
+					name:
+						attributes.title ||
+						attributes.series_title ||
+						attributes.service_type_name ||
+						attributes.short_dates ||
+						attributes.dates ||
+						'',
 					dates: attributes.dates || '',
 					shortDates: attributes.short_dates || attributes.dates || '',
 					times: times,

@@ -7,7 +7,7 @@ export default {
 
 			{ variableId: 'plan_title', name: 'Plan Title' },
 			{ variableId: 'plan_series', name: 'Plan Series' },
-			{ variableId: 'plan_name', name: 'Plan Name (title, or series if no title)' },
+			{ variableId: 'plan_name', name: 'Plan Name (title, else series, else service type name)' },
 			{ variableId: 'plan_dates', name: 'Plan Dates' },
 			{ variableId: 'plan_short_dates', name: 'Plan Short Dates' },
 			{ variableId: 'plan_service_times', name: 'Plan Service Times (all)' },

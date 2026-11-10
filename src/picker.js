@@ -484,9 +484,9 @@ export default {
 		this.selectPickerServiceTypeSlot(next)
 	},
 
-	/* A plan's display name: its title if it has one, otherwise its series title (blank if it has neither) */
+	/* A plan's display name: its title, else its series title, else the service type name, else its date */
 	getPickerPlanName: function (plan) {
-		return plan ? plan.title || plan.seriesTitle || '' : ''
+		return plan ? plan.title || plan.seriesTitle || this.picker.serviceTypeName || plan.shortDates || '' : ''
 	},
 
 	clearPicker: function () {
