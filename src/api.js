@@ -1027,7 +1027,8 @@ module.exports = {
 					label: team,
 				}))
 				newChoicesTeams.sort((a, b) => a.label.localeCompare(b.label))
-				self.CHOICES_TEAMS = newChoicesTeams
+				self.CHOICES_TEAMS =
+					newChoicesTeams.length > 0 ? newChoicesTeams : [{ id: 'scheduled_no_teams', label: 'No teams scheduled' }]
 
 				self.initVariables()
 				self.initFeedbacks()
