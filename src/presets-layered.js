@@ -515,7 +515,45 @@ export function getLayeredPresets(self) {
 		weight: 'bold',
 	})
 
-	presets.nextitem = infoCard(next, 'Next Item', ['next', 'item'], 'NEXT', 'plan_nextitem', 'No plan running')
+	presets.nextitem = {
+		...infoCard(
+			next,
+			'Next Item (press to go to it)',
+			['next', 'item', 'advance'],
+			'NEXT',
+			'plan_nextitem',
+			'No plan running',
+		),
+		steps: steps([{ actionId: 'nextitem_followed', options: {} }]),
+	}
+
+	/* ---- Plan Control: move the plan being followed ---- */
+	presets.go_next = {
+		type: 'layered',
+		category: 'Plan Control',
+		name: 'Go to Next Item',
+		keywords: ['next', 'advance', 'go', 'item'],
+		elements: [
+			background(COLORS.green),
+			text('action', 'Action', 'GO NEXT', { x: 4, y: 6, width: 92, height: 26 }, { weight: 'bold' }),
+			text('next', 'Next Item', orElse('plan_nextitem', 'No plan running'), { x: 4, y: 36, width: 92, height: 58 }),
+		],
+		steps: steps([{ actionId: 'nextitem_followed', options: {} }]),
+		feedbacks: [],
+	}
+	presets.go_previous = {
+		type: 'layered',
+		category: 'Plan Control',
+		name: 'Go to Previous Item',
+		keywords: ['previous', 'back', 'item'],
+		elements: [
+			background(COLORS.panel),
+			text('action', 'Action', 'PREVIOUS', { x: 4, y: 18, width: 92, height: 32 }, { weight: 'bold' }),
+			text('label', 'Label', 'ITEM', { x: 4, y: 54, width: 92, height: 26 }, { color: COLORS.muted }),
+		],
+		steps: steps([{ actionId: 'previousitem_followed', options: {} }]),
+		feedbacks: [],
+	}
 	presets.nextitem_time_length = infoCard(
 		next,
 		'Next Item Length',

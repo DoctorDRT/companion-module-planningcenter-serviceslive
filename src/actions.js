@@ -202,6 +202,46 @@ export default {
 			},
 		}
 
+		/* Next/Previous for the plan the variables are following (the one the Plan Picker took control of) */
+		const controlFollowedPlan = function (direction, label) {
+			let serviceTypeId = `${self.lastServiceTypeId || ''}`
+			let planId = `${self.lastPlanId || ''}`
+			if (!serviceTypeId || !planId) {
+				self.log('warn', `Can't go to the ${label} item: no plan is being followed yet. Take control of a plan first.`)
+				return
+			}
+			self
+				.takeControl(serviceTypeId, planId)
+				.then(function () {
+					self.updateStatus(InstanceStatus.Ok)
+					self.controlLive(serviceTypeId, planId, direction)
+				})
+				.catch(function (message) {
+					self.log('error', `Error going to the ${label} item: ` + message)
+					self.updateStatus(InstanceStatus.UnknownError, message)
+				})
+		}
+
+		actions.nextitem_followed = {
+			name: 'Go to Next Item (Plan Being Followed)',
+			description:
+				'Advances the plan the variables are following, for example the one taken with the Plan Picker. No plan to choose.',
+			options: [],
+			callback: async function () {
+				controlFollowedPlan('next', 'next')
+			},
+		}
+
+		actions.previousitem_followed = {
+			name: 'Go to Previous Item (Plan Being Followed)',
+			description:
+				'Goes back one item in the plan the variables are following, for example the one taken with the Plan Picker.',
+			options: [],
+			callback: async function () {
+				controlFollowedPlan('previous', 'previous')
+			},
+		}
+
 		actions.nextitem_specific = {
 			name: 'Go to Next Item of a Specific Plan',
 			options: [

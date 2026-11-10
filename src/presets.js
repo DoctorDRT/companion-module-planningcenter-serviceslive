@@ -85,7 +85,30 @@ export default {
 		)
 		presets.currentitem_key = infoPreset('Current Item', 'Current Item Key', 'KEY', 'plan_currentitem_key')
 
-		presets.nextitem = infoPreset('Next Item', 'Next Item', 'NEXT', 'plan_nextitem')
+		/* Buttons that move the plan being followed (the one taken with the Plan Picker) */
+		const controlCategory = 'Plan Control'
+		const goStep = (actionId) => [{ down: [{ actionId: actionId, options: {} }], up: [] }]
+		presets.go_previous = {
+			type: 'button',
+			category: controlCategory,
+			name: 'Go to Previous Item',
+			style: { text: 'PREVIOUS\\nITEM', size: 'auto', color: white, bgcolor: combineRgb(35, 42, 53) },
+			steps: goStep('previousitem_followed'),
+			feedbacks: [],
+		}
+		presets.go_next = {
+			type: 'button',
+			category: controlCategory,
+			name: 'Go to Next Item',
+			style: { text: `GO NEXT\\n${v('plan_nextitem')}`, size: 'auto', color: white, bgcolor: combineRgb(31, 166, 74) },
+			steps: goStep('nextitem_followed'),
+			feedbacks: [],
+		}
+
+		presets.nextitem = {
+			...infoPreset('Next Item', 'Next Item (press to go to it)', 'NEXT', 'plan_nextitem'),
+			steps: goStep('nextitem_followed'),
+		}
 		presets.nextitem_time_length = infoPreset(
 			'Next Item',
 			'Next Item Length',
@@ -433,7 +456,7 @@ export default {
 	},
 }
 
-const SECTION_ORDER = ['Plan Picker', 'Current Item', 'Next Item', 'Scheduled People']
+const SECTION_ORDER = ['Plan Picker', 'Plan Control', 'Current Item', 'Next Item', 'Scheduled People']
 
 const slug = (str) =>
 	`${str}`
