@@ -676,18 +676,44 @@ module.exports = {
 		actions.picker_select_servicetype = {
 			name: 'Plan Picker: Select Service Type',
 			description:
-				'Selects one of the service types loaded from the folder and loads its upcoming plans (Service Type 1 is the first in the folder).',
+				'Sets the picker service type and loads its next few upcoming plans (the soonest is selected, and the list refreshes every 5 minutes). Choose a slot from the folder loaded with Load Service Types from Folder, or a specific service type.',
 			options: [
+				{
+					type: 'dropdown',
+					label: 'Choose by',
+					id: 'mode',
+					default: 'slot',
+					choices: [
+						{ id: 'slot', label: 'Folder slot (from Load Service Types from Folder)' },
+						{ id: 'specific', label: 'Specific service type' },
+					],
+				},
 				{
 					type: 'dropdown',
 					label: 'Service Type Slot',
 					id: 'slot',
 					default: 1,
 					choices: pickerServiceTypeSlotChoices,
+					isVisibleExpression: `$(options:mode) != 'specific'`,
+				},
+				{
+					type: 'dropdown',
+					label: 'PCO Service Type',
+					id: 'servicetypeid',
+					default: self.currentState.internal.services_list[0].id,
+					choices: self.currentState.internal.services_list,
+					allowCustom: true,
+					tooltip: 'Pick a service type, or type a Service Type Id (variables are supported).',
+					isVisibleExpression: `$(options:mode) == 'specific'`,
 				},
 			],
 			callback: async function (event) {
-				self.selectPickerServiceTypeSlot(parseInt(event.options.slot))
+				if (event.options.mode === 'specific') {
+					let serviceTypeId = await self.parseVariablesInString(`${event.options.servicetypeid}`)
+					self.loadPickerPlans(serviceTypeId, false)
+				} else {
+					self.selectPickerServiceTypeSlot(parseInt(event.options.slot))
+				}
 			},
 		}
 
@@ -707,27 +733,6 @@ module.exports = {
 			],
 			callback: async function (event) {
 				self.stepPickerServiceType(event.options.direction === 'previous' ? -1 : 1)
-			},
-		}
-
-		actions.picker_load_plans = {
-			name: 'Plan Picker: Load Upcoming Plans for Service Type',
-			description:
-				'Loads the next few upcoming plans for a service type into the picker variables (picker_plan_1_dates, etc). The soonest plan is selected by default. The list refreshes every 5 minutes.',
-			options: [
-				{
-					type: 'dropdown',
-					label: 'PCO Service Type',
-					id: 'servicetypeid',
-					default: self.currentState.internal.services_list[0].id,
-					choices: self.currentState.internal.services_list,
-					allowCustom: true,
-					tooltip: 'Pick a service type, or type a Service Type Id (variables are supported).',
-				},
-			],
-			callback: async function (event) {
-				let serviceTypeId = await self.parseVariablesInString(`${event.options.servicetypeid}`)
-				self.loadPickerPlans(serviceTypeId, false)
 			},
 		}
 

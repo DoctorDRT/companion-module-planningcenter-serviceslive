@@ -507,9 +507,10 @@ module.exports = {
 			pickerServiceTypeSlotChoices.push({ id: i, label: `Service Type ${i}` })
 		}
 
-		feedbacks.picker_servicetype_slot_selected = {
+		feedbacks.picker_servicetype_selected = {
 			type: 'boolean',
-			name: 'Plan Picker: Service Type Slot is Selected',
+			name: 'Plan Picker: Service Type is Selected',
+			description: 'True when this folder slot, or this specific service type, is the one selected in the plan picker.',
 			defaultStyle: {
 				color: colorBlack,
 				bgcolor: combineRgb(255, 191, 0),
@@ -517,13 +518,38 @@ module.exports = {
 			options: [
 				{
 					type: 'dropdown',
+					label: 'Choose by',
+					id: 'mode',
+					default: 'slot',
+					choices: [
+						{ id: 'slot', label: 'Folder slot' },
+						{ id: 'specific', label: 'Specific service type' },
+					],
+				},
+				{
+					type: 'dropdown',
 					label: 'Service Type Slot',
 					id: 'slot',
 					default: 1,
 					choices: pickerServiceTypeSlotChoices,
+					isVisibleExpression: `$(options:mode) != 'specific'`,
+				},
+				{
+					type: 'dropdown',
+					label: 'PCO Service Type',
+					id: 'servicetypeid',
+					default: self.currentState.internal.services_list[0].id,
+					choices: self.currentState.internal.services_list,
+					allowCustom: true,
+					isVisibleExpression: `$(options:mode) == 'specific'`,
 				},
 			],
 			callback: async function (feedback) {
+				if (feedback.options.mode === 'specific') {
+					return (
+						self.picker.serviceTypeId !== '' && `${feedback.options.servicetypeid}` === `${self.picker.serviceTypeId}`
+					)
+				}
 				return self.getPickerSelectedServiceTypeSlot() === parseInt(feedback.options.slot)
 			},
 		}
@@ -547,31 +573,6 @@ module.exports = {
 			],
 			callback: async function (feedback) {
 				return !self.picker.serviceTypes[parseInt(feedback.options.slot) - 1]
-			},
-		}
-
-		feedbacks.picker_servicetype_loaded = {
-			type: 'boolean',
-			name: 'Plan Picker: Service Type is Loaded',
-			description: 'True when this service type is the one loaded in the plan picker.',
-			defaultStyle: {
-				color: colorBlack,
-				bgcolor: combineRgb(255, 191, 0),
-			},
-			options: [
-				{
-					type: 'dropdown',
-					label: 'PCO Service Type',
-					id: 'servicetypeid',
-					default: self.currentState.internal.services_list[0].id,
-					choices: self.currentState.internal.services_list,
-					allowCustom: true,
-				},
-			],
-			callback: async function (feedback) {
-				return (
-					`${feedback.options.servicetypeid}` === `${self.picker.serviceTypeId}` && self.picker.serviceTypeId !== ''
-				)
 			},
 		}
 

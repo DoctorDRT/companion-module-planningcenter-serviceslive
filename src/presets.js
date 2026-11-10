@@ -687,14 +687,19 @@ module.exports = {
 				},
 				steps: [
 					{
-						down: [{ actionId: 'picker_load_plans', options: { servicetypeid: service.id } }],
+						down: [
+							{
+								actionId: 'picker_select_servicetype',
+								options: { mode: 'specific', slot: 1, servicetypeid: service.id },
+							},
+						],
 						up: [],
 					},
 				],
 				feedbacks: [
 					{
-						feedbackId: 'picker_servicetype_loaded',
-						options: { servicetypeid: service.id },
+						feedbackId: 'picker_servicetype_selected',
+						options: { mode: 'specific', slot: 1, servicetypeid: service.id },
 						style: { color: combineRgb(0, 0, 0), bgcolor: pickerAmber },
 					},
 				],
@@ -733,7 +738,7 @@ module.exports = {
 				},
 				steps: [
 					{
-						down: [{ actionId: 'picker_select_servicetype', options: { slot: i } }],
+						down: [{ actionId: 'picker_select_servicetype', options: { mode: 'slot', slot: i, servicetypeid: '' } }],
 						up: [],
 					},
 				],
@@ -744,8 +749,8 @@ module.exports = {
 						style: { color: combineRgb(80, 80, 80), bgcolor: combineRgb(0, 0, 0) },
 					},
 					{
-						feedbackId: 'picker_servicetype_slot_selected',
-						options: { slot: i },
+						feedbackId: 'picker_servicetype_selected',
+						options: { mode: 'slot', slot: i, servicetypeid: '' },
 						style: { color: combineRgb(0, 0, 0), bgcolor: pickerAmber },
 					},
 				],
