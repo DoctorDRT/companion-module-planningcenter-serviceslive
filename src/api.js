@@ -581,6 +581,7 @@ module.exports = {
 						self.currentState.dynamicVariables['plan_nextitem'] = ''
 						self.currentState.dynamicVariables['plan_nextitem_time_length'] = ''
 						self.currentState.dynamicVariables['plan_nextitem_key'] = ''
+						self.currentState.dynamicVariables['plan_nextitem_description'] = ''
 
 						if (index < items.length) {
 							for (let i = index + 1; i < items.length; i++) {
@@ -589,8 +590,8 @@ module.exports = {
 
 								if (items[i].attributes.item_type == 'item' || items[i].attributes.item_type == 'song') {
 									//if the item type is a song, grab the key name and other stuff
-									if (item.attributes.item_type == 'song') {
-										self.currentState.dynamicVariables['plan_nextitem_key'] = item.attributes.key_name
+									if (items[i].attributes.item_type == 'song') {
+										self.currentState.dynamicVariables['plan_nextitem_key'] = items[i].attributes.key_name
 									}
 
 									self.currentState.dynamicVariables['plan_nextitem'] = items[i].attributes.title
@@ -666,10 +667,13 @@ module.exports = {
 					self.currentState.dynamicVariables['plan_currentitem_time_remaining_seconds'] = ''
 					self.currentState.dynamicVariables['plan_currentitem_time_remaining'] = '' //show the countdown to service start here (it's not a countdown to the service start time but a countdown to the service start time minus whatever pre service item lengths exist)
 					self.currentState.dynamicVariables['plan_currentitem'] = 'START OF SERVICE'
+					self.currentState.dynamicVariables['plan_currentitem_key'] = ''
+					self.currentState.dynamicVariables['plan_currentitem_description'] = ''
 
 					self.currentState.dynamicVariables['plan_nextitem'] = ''
 					self.currentState.dynamicVariables['plan_nextitem_time_length'] = ''
 					self.currentState.dynamicVariables['plan_nextitem_key'] = ''
+					self.currentState.dynamicVariables['plan_nextitem_description'] = ''
 
 					self.lastPlanItemId = null
 				}
