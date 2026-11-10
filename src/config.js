@@ -1,14 +1,24 @@
 import { Regex } from '@companion-module/base'
 
-/* A section heading with a one line explanation underneath */
-const heading = (id, label, value) => ({ type: 'static-text', id: id, width: 12, label: label, value: value })
+/*
+ * A section heading: a full width divider line, a larger title, and an optional explanation underneath.
+ * Companion renders static text as Markdown. The label is left empty and the value always has a line break,
+ * which makes Companion give every heading its own full width row instead of a label/value pair.
+ */
+const heading = (id, title, text = '') => ({
+	type: 'static-text',
+	id: id,
+	width: 12,
+	label: '',
+	value: `---\n\n### ${title}\n` + (text ? `\n${text}\n` : ''),
+})
 
 export default {
 	getConfigFields() {
 		return [
 			heading(
 				'info_account',
-				'1. Planning Center account',
+				'Planning Center account',
 				'This module controls PCO Live for your Planning Center Services plans. Create a Personal Access Token at <a href="https://api.planningcenteronline.com/oauth/applications" target="_blank">api.planningcenteronline.com/oauth/applications</a> and paste its two parts below. The PCO person who owns the token is the one who takes control of plans.',
 			),
 			{
@@ -27,7 +37,7 @@ export default {
 
 			heading(
 				'info_plans',
-				'2. Which plans to show',
+				'Which plans to show',
 				'Optional. Limits the plans offered in the action dropdowns. Find an id in the address bar when you open that folder or service type in PCO.',
 			),
 			{
@@ -59,7 +69,7 @@ export default {
 
 			heading(
 				'info_picker',
-				'3. Plan Picker',
+				'Plan Picker',
 				'How many buttons the Plan Picker fills. More slots means more variables and presets.',
 			),
 			{
@@ -85,7 +95,7 @@ export default {
 
 			heading(
 				'info_polling',
-				'4. Live updates (polling)',
+				'Live updates (polling)',
 				'Polling keeps the current item, countdown and feedbacks up to date. A very fast rate can get the connection rate-limited by PCO.',
 			),
 			{
@@ -117,7 +127,7 @@ export default {
 				isVisibleExpression: '$(options:polling)',
 			},
 
-			heading('info_troubleshooting', '5. Troubleshooting', ''),
+			heading('info_troubleshooting', 'Troubleshooting', ''),
 			{
 				type: 'checkbox',
 				id: 'verbose',

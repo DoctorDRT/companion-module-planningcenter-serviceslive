@@ -31,16 +31,16 @@ The PCO person who owns the token is the person who "takes control" of plans, so
 
 #### 2. Fill in the connection settings
 
-The settings are grouped into numbered sections.
+The settings are grouped into sections, each with a heading.
 
-**1. Planning Center account**
+**Planning Center account**
 
 | Setting        | What it does                                                                                        |
 | -------------- | --------------------------------------------------------------------------------------------------- |
 | Application ID | The Application ID from your token.                                                                 |
 | Secret Key     | The Secret from your token. It is kept in Companion's secrets store, so it stays hidden once saved. |
 
-**2. Which plans to show** (all optional)
+**Which plans to show** (all optional)
 
 | Setting                | What it does                                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -50,14 +50,14 @@ The settings are grouped into numbered sections.
 
 **Finding an id:** open the folder or service type in PCO Services in your browser and look at the address bar. The number after `folders/` or `service_types/` is the id. For example, in `services.planningcenteronline.com/service_types/123456` the service type id is `123456`.
 
-**3. Plan Picker**
+**Plan Picker**
 
 | Setting                    | What it does                                                              |
 | -------------------------- | ------------------------------------------------------------------------- |
 | Service Type Slots (1-30)  | How many service types from the folder get their own slot. Default is 8.  |
 | Upcoming Plan Slots (1-10) | How many upcoming plans load for the selected service type. Default is 4. |
 
-**4. Live updates (polling)**
+**Live updates (polling)**
 
 | Setting                     | What it does                                                                                                                                                          |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -65,7 +65,7 @@ The settings are grouped into numbered sections.
 | Polling Rate (ms)           | How often to check PCO. 3000 ms (3 seconds) is recommended. Faster rates can get the connection rate-limited by PCO.                                                  |
 | Auto-follow Service Type ID | Optional. When the connection starts, follow the next plan of this service type automatically. Leave blank if you choose plans with the Plan Picker or other actions. |
 
-**5. Troubleshooting**
+**Troubleshooting**
 
 | Setting         | What it does                                                         |
 | --------------- | -------------------------------------------------------------------- |
