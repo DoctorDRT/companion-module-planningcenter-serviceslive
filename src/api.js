@@ -285,105 +285,70 @@ module.exports = {
 		})
 	},
 
-	/* Takes control of the PCO plan which is needed before the plan can be changed. */
-	takeControl: function (serviceTypeId, planId) {
+	/* Takes control of the PCO plan which is needed before the plan can be changed. Rejects with a message on failure. */
+	takeControl: async function (serviceTypeId, planId) {
 		let self = this
 
-		try {
-			let live_url = `${baseAPIUrl}/service_types/${serviceTypeId}/plans/${planId}/live`
-
-			let toggle_url = live_url + '/toggle_control'
-
-			return new Promise(function (resolve, reject) {
-				self
-					.doRest('GET', live_url, {})
-					.then(function (result) {
-						if (result.data.links.controller === null) {
-							//no one is controlling this plan, so let's take control
-							self
-								.doRest('POST', toggle_url, {})
-								.then(function (result) {
-									resolve(result)
-								})
-								.catch(function (message) {
-									self.log('error', 'Error togggling control: ' + message)
-									self.updateStatus(InstanceStatus.ConnectionFailure, 'Error toggling control: ' + message)
-								})
-						} else {
-							//someone is in control, so let's check to see who it is
-							if (result.data.links.controller === self.currentState.internal.currentController) {
-								//no need to do anything, we are currently in control
-								resolve(result)
-							} else {
-								//we aren't in control, so we need to take control by first toggling the controller to null
-								self
-									.doRest('POST', toggle_url, {})
-									.then(function (result) {
-										//now toggle it back to us
-										self
-											.doRest('POST', toggle_url, {})
-											.then(function (result) {
-												//we should be in control now, let's save the controller to an internal variable so we know who "we" are next time
-												self.currentState.internal.currentController = result.data.links.controller
-												resolve(result)
-											})
-											.catch(function (message) {
-												self.log('error', 'Error togggling control: ' + message)
-												self.updateStatus(InstanceStatus.ConnectionFailure, 'Error toggling control: ' + message)
-											})
-									})
-									.catch(function (message) {
-										self.log('error', 'Error togggling control: ' + message)
-										self.updateStatus(InstanceStatus.ConnectionFailure, 'Error toggling control: ' + message)
-									})
-							}
-						}
-					})
-					.catch(function (message) {
-						self.log('error', 'Error Taking Control of Plan: ' + message)
-						self.updateStatus(InstanceStatus.ConnectionFailure, message)
-					})
-			})
-		} catch (error) {
-			self.log('error', 'Error controlling plan: ' + error)
-			self.updateStatus(InstanceStatus.ConnectionFailure, 'Error controlling plan: ' + error)
+		if (!serviceTypeId || !planId) {
+			throw 'Missing Service Type Id or Plan Id.'
 		}
+
+		let live_url = `${baseAPIUrl}/service_types/${serviceTypeId}/plans/${planId}/live`
+		let toggle_url = live_url + '/toggle_control'
+
+		let result = await self.doRest('GET', live_url, {})
+		let controller = result.data.links.controller
+
+		if (controller !== null && controller === self.currentState.internal.currentController) {
+			//no need to do anything, we are currently in control
+			return result
+		}
+
+		if (controller !== null) {
+			//someone else is in control, so we need to take control by first toggling the controller to null
+			await self.doRest('POST', toggle_url, {})
+		}
+
+		//no one is controlling this plan now, so let's take control
+		result = await self.doRest('POST', toggle_url, {})
+
+		//we should be in control now, let's save the controller to an internal variable so we know who "we" are next time
+		self.currentState.internal.currentController = result.data.links.controller
+
+		return result
 	},
 
-	/* Releases control of the PCO plan */
-	releaseControl: function (serviceTypeId, planId) {
+	/* Releases control of the PCO plan. Resolves without doing anything if no one is in control. */
+	releaseControl: async function (serviceTypeId, planId) {
 		let self = this
 
-		try {
-			let live_url = `${baseAPIUrl}/service_types/${serviceTypeId}/plans/${planId}/live`
-			let toggle_url = live_url + '/toggle_control'
-
-			return new Promise(function (resolve, reject) {
-				self
-					.doRest('GET', live_url, {})
-					.then(function (result) {
-						if (result.data.links.controller !== null) {
-							//let's release control
-							self
-								.doRest('POST', toggle_url, {})
-								.then(function (result) {
-									resolve(result)
-								})
-								.catch(function (message) {
-									self.log('error', message)
-									self.updateStatus(InstanceStatus.ConnectionFailure, message)
-								})
-						}
-					})
-					.catch(function (message) {
-						self.log('error', 'Error Releasing Control of Plan: ' + message)
-						self.updateStatus(InstanceStatus.ConnectionFailure, message)
-					})
-			})
-		} catch (error) {
-			self.log('error', 'Error controlling plan: ' + error)
-			self.updateStatus(InstanceStatus.ConnectionFailure, 'Error controlling plan: ' + error)
+		if (!serviceTypeId || !planId) {
+			throw 'Missing Service Type Id or Plan Id.'
 		}
+
+		let live_url = `${baseAPIUrl}/service_types/${serviceTypeId}/plans/${planId}/live`
+		let toggle_url = live_url + '/toggle_control'
+
+		let result = await self.doRest('GET', live_url, {})
+
+		if (result.data.links.controller !== null) {
+			//let's release control
+			result = await self.doRest('POST', toggle_url, {})
+		}
+
+		return result
+	},
+
+	/* After taking control of a plan, make it the plan that variables, feedbacks and polling follow. */
+	setControlledPlan: function (serviceTypeId, planId) {
+		let self = this
+
+		self.lastServiceTypeId = serviceTypeId
+		self.lastPlanId = planId
+
+		self.getTeamPositions()
+		self.checkVariables()
+		self.startInterval()
 	},
 
 	controlLive: function (serviceTypeId, planId, direction) {
@@ -776,27 +741,23 @@ module.exports = {
 		}, 1000)
 	},
 
-	getPlanIdOfServiceType: function (serviceTypeId) {
+	/* Resolves with the id of the next upcoming plan in a service type. Rejects with a message on failure. */
+	getPlanIdOfServiceType: async function (serviceTypeId) {
 		let self = this
 
-		try {
-			let plans_url = `${baseAPIUrl}/service_types/${serviceTypeId}/plans?filter=future&per_page=1&order=sort_date`
-
-			return new Promise(function (resolve, reject) {
-				self
-					.doRest('GET', plans_url, {})
-					.then(function (result) {
-						resolve(result.data[0].id)
-					})
-					.catch(function (message) {
-						self.log('error', 'Error getting Plan Id from Service Type: ' + message)
-						self.updateStatus(InstanceStatus.ConnectionFailure, message)
-					})
-			})
-		} catch (error) {
-			self.log('error', 'Error getting Plan Id of service type: ' + error)
-			self.updateStatus(InstanceStatus.ConnectionFailure, 'Error getting next Plan Id by Service Type Id: ' + error)
+		if (!serviceTypeId) {
+			throw 'No Service Type Id given.'
 		}
+
+		let plans_url = `${baseAPIUrl}/service_types/${serviceTypeId}/plans?filter=future&per_page=1&order=sort_date`
+
+		let result = await self.doRest('GET', plans_url, {})
+
+		if (!result.data || result.data.length === 0) {
+			throw `No upcoming plans found for Service Type ${serviceTypeId}.`
+		}
+
+		return result.data[0].id
 	},
 
 	getServiceIdFromPlanId: function (planId) {
