@@ -139,14 +139,15 @@ Most actions come in a few versions. Pick the one that matches how you work:
 
 #### Running a plan
 
-| Action                                               | What it does                                                                       |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Go to Next Item / Go to Previous Item                | Advances the plan chosen in the dropdown.                                          |
-| Reset Live Times                                     | Clears the live times of the plan chosen in the dropdown.                          |
-| ...of Next Plan in Selected Service Type (3 actions) | Same as above, for the next upcoming plan of a service type.                       |
-| ...of a Specific Plan (3 actions)                    | Same as above, for a Service Type ID and Plan ID you enter. Variables are allowed. |
+| Action                                               | What it does                                                                                                  |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Go to Next / Previous Item (Plan Being Followed)     | Advances the plan the variables are following, such as the one taken with the Plan Picker. Nothing to set up. |
+| Go to Next Item / Go to Previous Item                | Advances the plan chosen in the dropdown.                                                                     |
+| Reset Live Times                                     | Clears the live times of the plan chosen in the dropdown.                                                     |
+| ...of Next Plan in Selected Service Type (3 actions) | Same as above, for the next upcoming plan of a service type.                                                  |
+| ...of a Specific Plan (3 actions)                    | Same as above, for a Service Type ID and Plan ID you enter. Variables are allowed.                            |
 
-To advance whatever plan the picker is controlling, use **Go to Next Item of a Specific Plan** with Service Type ID `$(services-live:picker_servicetype_id)` and Plan ID `$(services-live:picker_selected_plan_id)`.
+To advance whatever plan the Plan Picker took control of, use **Go to Next / Previous Item (Plan Being Followed)**, or the **Plan Control** presets.
 
 #### Taking control
 
@@ -239,8 +240,9 @@ Open the **Variables** tab in Companion to see the exact names for your teams.
 Presets are in the **Presets** tab under this connection:
 
 - **Plan Picker**, in groups: Specific Service Types (one button per service type), Folders (one Load button per folder), Service Type Slots, Upcoming Plans, and Control (Take/Release).
+- **Plan Control**: Go Next (shows the next item's name) and Previous. They move the plan being followed.
 - **Current Item**: item number ("Item 3 of 12" with a progress bar), current item name, length, start time, time remaining, end time, key, and a countdown with a progress bar.
-- **Next Item**: next item name, length and key.
+- **Next Item**: next item name, length and key. Pressing the Next Item button also goes to the next item.
 - **Scheduled People**: for the plan being followed, one section for every scheduled position in order, plus one section per team.
   - **Position and Person** shows the position name, who is scheduled, and a status badge in the corner: a green check for confirmed, an amber question mark for unconfirmed, and a red X for declined.
   - **Photo with Status** shows the person's photo with a status bar along the bottom.
