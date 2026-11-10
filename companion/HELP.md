@@ -35,6 +35,20 @@ Add an action to a button and choose the PCO Plan you wish to control.
 - Release Control of Next Plan in Selected Service Type
 - Set Plan Id to poll for variables
 
+### Plan Picker
+
+The Plan Picker lets an operator choose a service type, see its next few upcoming plans on buttons, pick one, and then take control of it. Ready-made buttons are in the **Plan Picker** preset category.
+
+1. **Plan Picker: Load Upcoming Plans for Service Type** - one button per service type. Loads the next plans (4 by default, set in the instance config) and selects the soonest one. The list refreshes itself every 5 minutes.
+2. **Plan Picker: Select Plan** (Plan 1 = soonest) or **Select Next/Previous Plan** - choose which plan you want.
+3. **Plan Picker: Take Control of Selected Plan** - takes control and starts polling that plan, so the current/next item variables follow it.
+
+Also available: Refresh Upcoming Plans, Release Control of Selected Plan, and Clear.
+
+Picker variables: `picker_servicetype_id`, `picker_servicetype_name`, `picker_plan_count`, `picker_selected_slot`, `picker_selected_plan_id`, `picker_selected_plan_dates`, `picker_selected_plan_short_dates`, `picker_selected_plan_title`, `picker_selected_plan_times`, and for each slot N: `picker_plan_N_id`, `picker_plan_N_dates`, `picker_plan_N_short_dates`, `picker_plan_N_title`, `picker_plan_N_series`, `picker_plan_N_times`.
+
+Picker feedbacks: Service Type is Loaded, Plan Slot is Selected, Plan Slot is Being Controlled, Plan Slot is Empty.
+
 **Available Variables:**
 
 - Organization Name

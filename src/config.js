@@ -53,6 +53,15 @@ module.exports = {
 				regex: Regex.NUMBER,
 			},
 			{
+				type: 'number',
+				id: 'picker_slots',
+				label: 'Plan Picker: number of upcoming plans to load (1-10). Default is 4.',
+				width: 3,
+				min: 1,
+				max: 10,
+				default: 4,
+			},
+			{
 				type: 'static-text',
 				id: 'info',
 				width: 12,
