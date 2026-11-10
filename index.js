@@ -65,6 +65,7 @@ class PCOLiveInstance extends InstanceBase {
 		this.lastPlanItemId = undefined
 
 		this.INTERVAL = null
+		this.RESTART_TIMEOUT = null
 		this.ITEM_TIME_REMAINING_INTERVAL = null
 
 		this.planItemNoteCategories = [] //array of plan item note categories for the current service type
@@ -110,6 +111,7 @@ class PCOLiveInstance extends InstanceBase {
 		this.updateStatus(InstanceStatus.Connecting)
 
 		this.stopInterval()
+		this.cancelRestart()
 
 		this.lastServiceTypeId = undefined
 		this.lastPlanId = undefined
@@ -121,6 +123,7 @@ class PCOLiveInstance extends InstanceBase {
 	async destroy() {
 		//close out any connections
 		this.stopInterval()
+		this.cancelRestart()
 
 		this.lastServiceTypeId = undefined
 		this.lastPlanId = undefined

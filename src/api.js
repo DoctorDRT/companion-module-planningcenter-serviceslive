@@ -45,13 +45,18 @@ module.exports = {
 				//get Service Types
 				let services_url = `${baseAPIUrl}/service_types`
 
-				if (self.config.servicetypeid !== '') {
+				if (self.config.servicetypeid) {
 					let serviceTypeId = self.config.servicetypeid
 					services_url += `/${serviceTypeId}`
 					self.lastServiceTypeId = serviceTypeId
-				} else if (self.config.parentfolder !== '') {
+				} else if (self.config.parentfolder) {
 					services_url += `?where[parent_id]=${self.config.parentfolder}`
 				}
+
+				//start from empty lists, otherwise every reconnect would add the same plans again
+				self.currentState.internal.services = []
+				self.currentState.internal.plans = []
+				self.currentState.internal.plan_times = []
 
 				let defaultPlanListObj = {}
 				defaultPlanListObj.id = '0'
@@ -135,8 +140,6 @@ module.exports = {
 				self.currentState.internal.services_list.push(serviceListObj)
 				self.currentState.internal.services_withorg_list.push(serviceListObj)
 
-				self.initActions() //update the actions because the dropdown values have changed
-
 				self
 					.doRest('GET', plans_url, {})
 					.then(function (result) {
@@ -154,6 +157,8 @@ module.exports = {
 						self.updateStatus(InstanceStatus.ConnectionFailure, message)
 					})
 			}
+
+			self.initActions() //update the actions because the dropdown values have changed
 
 			self.updateStatus(InstanceStatus.Ok)
 		} catch (error) {
@@ -432,12 +437,29 @@ module.exports = {
 	restartModule: function () {
 		let self = this
 
+		if (self.RESTART_TIMEOUT) {
+			return //a restart is already scheduled (several in-flight polls can fail at once)
+		}
+
 		if (self.config.verbose) {
 			self.log('debug', 'Restarting Connection Logic in 15 seconds...')
 		}
-		setTimeout(function () {
+		self.RESTART_TIMEOUT = setTimeout(function () {
+			self.RESTART_TIMEOUT = null
 			self.initPCOLive()
+
+			//pick polling back up for the plan we were following before the error
+			if (self.lastServiceTypeId && self.lastPlanId) {
+				self.startInterval()
+			}
 		}, 15000)
+	},
+
+	cancelRestart: function () {
+		if (this.RESTART_TIMEOUT) {
+			clearTimeout(this.RESTART_TIMEOUT)
+			this.RESTART_TIMEOUT = null
+		}
 	},
 
 	processLiveData: function (result) {
