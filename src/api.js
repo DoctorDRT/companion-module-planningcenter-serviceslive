@@ -6,6 +6,11 @@ const baseAPIUrl = 'https://api.planningcenteronline.com/services/v2'
 
 const { Jimp } = require('jimp')
 
+//how often the slower-changing data is refreshed while polling (the live data itself follows the polling rate)
+const TEAM_POSITIONS_REFRESH_MS = 60 * 1000
+const ITEM_NOTE_CATEGORIES_REFRESH_MS = 5 * 60 * 1000
+const ITEM_NOTES_REFRESH_MS = 60 * 1000
+
 module.exports = {
 	initPCOLive: function () {
 		let self = this
@@ -554,7 +559,10 @@ module.exports = {
 							self.currentState.dynamicVariables['plan_currentitem_description'] = ''
 						}
 
-						self.getItemNotes(item.id).then((notes) => {
+						self.getItemNotesThrottled('current', item.id).then((notes) => {
+							if (!notes) {
+								return //notes for this item were loaded recently, nothing to update
+							}
 							let variableObj = {}
 
 							//loop through every item category and clear the variable for that category
@@ -605,7 +613,10 @@ module.exports = {
 										self.currentState.dynamicVariables['plan_nextitem_description'] = ''
 									}
 
-									self.getItemNotes(items[i].id).then((notes) => {
+									self.getItemNotesThrottled('next', items[i].id).then((notes) => {
+										if (!notes) {
+											return //notes for this item were loaded recently, nothing to update
+										}
 										let variableObj = {}
 
 										//loop through every item category and clear the variable for that category
@@ -684,7 +695,7 @@ module.exports = {
 		}
 	},
 
-	getItemNoteCategories: function () {
+	getItemNoteCategories: function (force) {
 		//https://api.planningcenteronline.com/services/v2/service_types/{service_type_id}/item_note_categories
 		let self = this
 
@@ -692,6 +703,18 @@ module.exports = {
 		if (!self.lastServiceTypeId) {
 			return Promise.reject('No Service Type Id set. Please select a service type first.')
 		}
+
+		//categories rarely change, so only reload them when the service type changes or every few minutes
+		let serviceTypeId = self.lastServiceTypeId
+		if (
+			!force &&
+			self.itemNoteCategoriesServiceTypeId === serviceTypeId &&
+			Date.now() - self.itemNoteCategoriesFetchedAt < ITEM_NOTE_CATEGORIES_REFRESH_MS
+		) {
+			return Promise.resolve(self.planItemNoteCategories)
+		}
+		self.itemNoteCategoriesServiceTypeId = serviceTypeId
+		self.itemNoteCategoriesFetchedAt = Date.now()
 
 		return new Promise(function (resolve, reject) {
 			self
@@ -715,6 +738,7 @@ module.exports = {
 					resolve(result.data)
 				})
 				.catch(function (error) {
+					self.itemNoteCategoriesFetchedAt = 0 //try again on the next poll
 					reject(error)
 				})
 		})
@@ -747,6 +771,30 @@ module.exports = {
 				.catch(function (error) {
 					reject(error)
 				})
+		})
+	},
+
+	/*
+	 * Notes rarely change while an item is live, so only reload them when the current/next item changes
+	 * or about once a minute. Resolves with the notes, or null when they did not need to be reloaded.
+	 */
+	getItemNotesThrottled: function (which, itemId) {
+		let self = this
+
+		if (!self.itemNotesFetched) {
+			self.itemNotesFetched = {}
+		}
+		let last = self.itemNotesFetched[which]
+		let planKey = `${self.lastPlanId}:${itemId}`
+		if (last && last.key === planKey && Date.now() - last.at < ITEM_NOTES_REFRESH_MS) {
+			return Promise.resolve(null)
+		}
+		self.itemNotesFetched[which] = { key: planKey, at: Date.now() }
+
+		return self.getItemNotes(itemId).catch(function (message) {
+			self.itemNotesFetched[which] = undefined //try again on the next poll
+			self.log('warn', 'Error Getting Item Notes: ' + message)
+			return null
 		})
 	},
 
@@ -834,8 +882,10 @@ module.exports = {
 				if (self.lastServiceTypeId && self.lastPlanId) {
 					self.INTERVAL = setInterval(function () {
 						self.getCurrentLive()
-						self.getItemNoteCategories()
-						self.getTeamPositions()
+						self.getItemNoteCategories().catch(function (message) {
+							self.log('warn', 'Error Getting Item Note Categories: ' + message)
+						})
+						self.getTeamPositions() //only actually refreshes about once a minute
 					}, self.config.pollingRate)
 				} else {
 					self.log(
@@ -867,7 +917,25 @@ module.exports = {
 		}
 	},
 
-	getTeamPositions: function () {
+	/* GETs a list endpoint and follows links.next until every page is loaded. Returns { data, included }. */
+	getAllPages: async function (url) {
+		let self = this
+		let data = []
+		let included = []
+		let pageCount = 0
+
+		while (url && pageCount < 20) {
+			let result = await self.doRest('GET', url, {})
+			data = data.concat(result.data || [])
+			included = included.concat(result.included || [])
+			url = result.links && result.links.next ? result.links.next : null
+			pageCount++
+		}
+
+		return { data: data, included: included }
+	},
+
+	getTeamPositions: function (force) {
 		let self = this
 
 		try {
@@ -875,6 +943,17 @@ module.exports = {
 			let planId = self.lastPlanId
 
 			if (serviceTypeId && planId) {
+				//the schedule changes slowly, so while polling only refresh it about once a minute (or right away for a new plan)
+				if (
+					!force &&
+					self.teamPositionsPlanId === planId &&
+					Date.now() - self.teamPositionsFetchedAt < TEAM_POSITIONS_REFRESH_MS
+				) {
+					return
+				}
+				self.teamPositionsPlanId = planId
+				self.teamPositionsFetchedAt = Date.now()
+
 				let url = `${baseAPIUrl}/service_types/${serviceTypeId}/plans/${planId}/team_members?include=person,team&per_page=100`
 
 				if (self.config.verbose) {
@@ -882,11 +961,15 @@ module.exports = {
 				}
 
 				self
-					.doRest('GET', url, {})
+					.getAllPages(url)
 					.then(function (result) {
+						if (self.lastPlanId !== planId) {
+							return //the plan changed while we were loading
+						}
 						self.processTeamPositions(result)
 					})
 					.catch(function (message) {
+						self.teamPositionsFetchedAt = 0 //try again on the next poll
 						self.log('warn', 'Error Getting Team Positions: ' + message)
 					})
 			} else {
@@ -934,18 +1017,14 @@ module.exports = {
 
 				newScheduledPeople.push(personObj)
 
-				// Asynchronously fetch the person photo (not used in core comparison)
+				// Photos are cached by URL so each one is only downloaded once (not used in core comparison)
 				if (personObj.photoThumbnail && personObj.photoThumbnail.length > 0) {
-					self
-						.getPersonPhoto(personObj.photoThumbnail)
-						.then(function (result) {
-							if (result) {
-								personObj.photo = result
-							}
-						})
-						.catch(function (message) {
-							self.log('error', 'Error getting person photo: ' + message)
-						})
+					if (self.personPhotoCache.has(personObj.photoThumbnail)) {
+						personObj.photo = self.personPhotoCache.get(personObj.photoThumbnail)
+					} else {
+						personObj.photo = null
+						self.loadPersonPhoto(personObj.photoThumbnail)
+					}
 				} else {
 					personObj.photo = null
 				}
@@ -1035,6 +1114,36 @@ module.exports = {
 		} catch (error) {
 			self.log('warn', 'Error processing team positions: ' + error)
 		}
+	},
+
+	/* Downloads a person photo once, caches it, and fills it in on anyone currently scheduled with that photo */
+	loadPersonPhoto: function (photoUrl) {
+		let self = this
+
+		if (self.personPhotoLoading.has(photoUrl)) {
+			return
+		}
+		self.personPhotoLoading.add(photoUrl)
+
+		self
+			.getPersonPhoto(photoUrl)
+			.then(function (photo) {
+				if (photo) {
+					self.personPhotoCache.set(photoUrl, photo)
+					self.scheduledPeople.forEach((p) => {
+						if (p.photoThumbnail === photoUrl) {
+							p.photo = photo
+						}
+					})
+					self.checkFeedbacks()
+				}
+			})
+			.catch(function (message) {
+				self.log('error', 'Error getting person photo: ' + message)
+			})
+			.finally(function () {
+				self.personPhotoLoading.delete(photoUrl)
+			})
 	},
 
 	async getPersonPhoto(personPhotoUrl) {
