@@ -70,6 +70,12 @@ class PCOLiveInstance extends InstanceBase {
 		this.planItemNoteCategories = [] //array of plan item note categories for the current service type
 
 		this.scheduledPeople = [] //array of people scheduled to the current plan being controlled
+		this.teamPositionsPlanId = undefined //plan the scheduled people were last loaded for
+		this.teamPositionsFetchedAt = 0
+		this.itemNoteCategoriesServiceTypeId = undefined
+		this.itemNoteCategoriesFetchedAt = 0
+		this.personPhotoCache = new Map() //photo thumbnail url -> png base64
+		this.personPhotoLoading = new Set() //photo urls currently being downloaded
 
 		this.CHOICES_POSITIONS = [
 			{
