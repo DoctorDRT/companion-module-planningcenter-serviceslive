@@ -160,6 +160,9 @@ module.exports = {
 			}
 
 			self.initActions() //update the actions because the dropdown values have changed
+			//service types are known now, so refresh the dropdowns/presets that list them (Plan Picker)
+			self.initFeedbacks()
+			self.initPresets()
 
 			self.updateStatus(InstanceStatus.Ok)
 		} catch (error) {
@@ -448,6 +451,11 @@ module.exports = {
 				self.log('error', result.errors)
 				self.updateStatus(InstanceStatus.ConnectionFailure, result.errors)
 			} else {
+				if (result.data && result.data.links && 'controller' in result.data.links) {
+					//who is in control of the plan being followed (used by the Plan Picker "in control" feedback)
+					self.currentState.internal.liveController = result.data.links.controller
+				}
+
 				if (result.data && result.data.attributes) {
 					self.currentState.dynamicVariables['plan_title'] = result.data.attributes.title
 					self.currentState.dynamicVariables['plan_series'] = result.data.attributes.series_title

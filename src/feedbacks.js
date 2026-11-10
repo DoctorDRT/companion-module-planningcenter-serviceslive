@@ -495,6 +495,106 @@ module.exports = {
 			},
 		}
 
+		/* Plan Picker feedbacks */
+		const colorBlack = combineRgb(0, 0, 0)
+		let pickerSlotChoices = []
+		for (let i = 1; i <= self.getPickerSlotCount(); i++) {
+			pickerSlotChoices.push({ id: i, label: `Plan ${i}` })
+		}
+
+		feedbacks.picker_servicetype_loaded = {
+			type: 'boolean',
+			name: 'Plan Picker: Service Type is Loaded',
+			description: 'True when this service type is the one loaded in the plan picker.',
+			defaultStyle: {
+				color: colorBlack,
+				bgcolor: combineRgb(255, 191, 0),
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'PCO Service Type',
+					id: 'servicetypeid',
+					default: self.currentState.internal.services_list[0].id,
+					choices: self.currentState.internal.services_list,
+					allowCustom: true,
+				},
+			],
+			callback: async function (feedback) {
+				return (
+					`${feedback.options.servicetypeid}` === `${self.picker.serviceTypeId}` && self.picker.serviceTypeId !== ''
+				)
+			},
+		}
+
+		feedbacks.picker_plan_selected = {
+			type: 'boolean',
+			name: 'Plan Picker: Plan Slot is Selected',
+			defaultStyle: {
+				color: colorBlack,
+				bgcolor: combineRgb(255, 191, 0),
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Plan Slot',
+					id: 'slot',
+					default: 1,
+					choices: pickerSlotChoices,
+				},
+			],
+			callback: async function (feedback) {
+				return self.getPickerSelectedSlot() === parseInt(feedback.options.slot)
+			},
+		}
+
+		feedbacks.picker_plan_controlled = {
+			type: 'boolean',
+			name: 'Plan Picker: Plan Slot is Being Controlled',
+			description:
+				'True when this connection is in control of the plan in this slot (or the selected plan), no matter which button took control.',
+			defaultStyle: {
+				color: colorWhite,
+				bgcolor: combineRgb(0, 153, 51),
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Plan Slot',
+					id: 'slot',
+					default: 0,
+					choices: [{ id: 0, label: 'Selected plan' }, ...pickerSlotChoices],
+				},
+			],
+			callback: async function (feedback) {
+				let slot = parseInt(feedback.options.slot)
+				let plan = slot === 0 ? self.getPickerSelectedPlan() : self.picker.plans[slot - 1]
+				return !!plan && self.isInControlOfPlan(plan.id)
+			},
+		}
+
+		feedbacks.picker_slot_empty = {
+			type: 'boolean',
+			name: 'Plan Picker: Plan Slot is Empty',
+			description: 'True when no upcoming plan is loaded in this slot. Useful for dimming unused buttons.',
+			defaultStyle: {
+				color: combineRgb(80, 80, 80),
+				bgcolor: colorBlack,
+			},
+			options: [
+				{
+					type: 'dropdown',
+					label: 'Plan Slot',
+					id: 'slot',
+					default: 1,
+					choices: pickerSlotChoices,
+				},
+			],
+			callback: async function (feedback) {
+				return !self.picker.plans[parseInt(feedback.options.slot) - 1]
+			},
+		}
+
 		self.setFeedbackDefinitions(feedbacks)
 	},
 }

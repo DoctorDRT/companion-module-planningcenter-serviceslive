@@ -11,6 +11,7 @@ const actions = require('./src/actions')
 const variables = require('./src/variables')
 const feedbacks = require('./src/feedbacks')
 const presets = require('./src/presets')
+const picker = require('./src/picker')
 
 class PCOLiveInstance extends InstanceBase {
 	constructor(internal) {
@@ -24,6 +25,7 @@ class PCOLiveInstance extends InstanceBase {
 			...variables,
 			...feedbacks,
 			...presets,
+			...picker,
 		})
 
 		this.currentState = {
@@ -66,6 +68,9 @@ class PCOLiveInstance extends InstanceBase {
 
 		this.INTERVAL = null
 		this.RESTART_TIMEOUT = null
+		this.PICKER_INTERVAL = null
+
+		this.initPickerState()
 		this.ITEM_TIME_REMAINING_INTERVAL = null
 
 		this.planItemNoteCategories = [] //array of plan item note categories for the current service type
@@ -112,18 +117,25 @@ class PCOLiveInstance extends InstanceBase {
 
 		this.stopInterval()
 		this.cancelRestart()
+		this.stopPickerRefresh()
 
 		this.lastServiceTypeId = undefined
 		this.lastPlanId = undefined
 		this.lastPlanItemId = undefined
 
 		this.initPCOLive()
+
+		//if the plan picker already had a service type loaded, reload it with the new settings
+		if (this.picker.serviceTypeId) {
+			this.loadPickerPlans(this.picker.serviceTypeId, true)
+		}
 	}
 
 	async destroy() {
 		//close out any connections
 		this.stopInterval()
 		this.cancelRestart()
+		this.stopPickerRefresh()
 
 		this.lastServiceTypeId = undefined
 		this.lastPlanId = undefined
