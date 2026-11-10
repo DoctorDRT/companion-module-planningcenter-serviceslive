@@ -5,12 +5,12 @@ import { Regex } from '@companion-module/base'
  * Companion renders static text as Markdown. The label is left empty and the value always has a line break,
  * which makes Companion give every heading its own full width row instead of a label/value pair.
  */
-const heading = (id, title, text = '') => ({
+const heading = (id, title, text = '', divider = true) => ({
 	type: 'static-text',
 	id: id,
 	width: 12,
 	label: '',
-	value: `---\n\n### ${title}\n` + (text ? `\n${text}\n` : ''),
+	value: (divider ? '---\n\n' : '') + `### ${title}\n` + (text ? `\n${text}\n` : ''),
 })
 
 export default {
@@ -18,8 +18,9 @@ export default {
 		return [
 			heading(
 				'info_account',
-				'Planning Center account',
+				'Planning Center Account',
 				'This module controls PCO Live for your Planning Center Services plans. Create a Personal Access Token at <a href="https://api.planningcenteronline.com/oauth/applications" target="_blank">api.planningcenteronline.com/oauth/applications</a> and paste its two parts below. The PCO person who owns the token is the one who takes control of plans.',
+				false, //nothing above the first section, so no divider line
 			),
 			{
 				type: 'textinput',
@@ -37,7 +38,7 @@ export default {
 
 			heading(
 				'info_plans',
-				'Which plans to show',
+				'Which Plans to Show',
 				'Optional. Limits the plans offered in the action dropdowns. Find an id in the address bar when you open that folder or service type in PCO.',
 			),
 			{
@@ -157,7 +158,7 @@ export default {
 
 			heading(
 				'info_polling',
-				'Live updates (polling)',
+				'Live Updates (Polling)',
 				'Polling keeps the current item, countdown and feedbacks up to date. A very fast rate can get the connection rate-limited by PCO.',
 			),
 			{

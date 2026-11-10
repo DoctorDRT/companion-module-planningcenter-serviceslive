@@ -7,6 +7,14 @@ export default {
 
 			{ variableId: 'plan_title', name: 'Plan Title' },
 			{ variableId: 'plan_series', name: 'Plan Series' },
+			{ variableId: 'plan_name', name: 'Plan Name (title, or series if no title)' },
+			{ variableId: 'plan_dates', name: 'Plan Dates' },
+			{ variableId: 'plan_short_dates', name: 'Plan Short Dates' },
+			{ variableId: 'plan_service_times', name: 'Plan Service Times (all)' },
+			{ variableId: 'plan_service_count', name: 'Plan Number of Service Times' },
+			{ variableId: 'plan_current_service_time', name: 'Current Service Time' },
+			{ variableId: 'plan_current_service_name', name: 'Current Service Time Name (from PCO, or the time)' },
+			{ variableId: 'plan_current_service_number', name: 'Current Service Time Number (1 = first service)' },
 			//{ variableId: 'plan_times', name: 'Plan Times'},
 			//{ variableId: 'plan_current_time', name: 'Plan Current Time'},
 
@@ -191,8 +199,18 @@ export default {
 
 			variableObj.plan_title = this.currentState.dynamicVariables.plan_title
 			variableObj.plan_series = this.currentState.dynamicVariables.plan_series
-			//variableObj.plan_times = this.currentState.dynamicVariables.plan_times;
-			//variableObj.plan_current_time = this.currentState.dynamicVariables.plan_current_time;
+			for (let key of [
+				'plan_name',
+				'plan_dates',
+				'plan_short_dates',
+				'plan_service_times',
+				'plan_service_count',
+				'plan_current_service_time',
+				'plan_current_service_name',
+				'plan_current_service_number',
+			]) {
+				variableObj[key] = this.currentState.dynamicVariables[key] ?? ''
+			}
 
 			variableObj.plan_index = this.currentState.dynamicVariables.plan_index
 			variableObj.plan_length = this.currentState.dynamicVariables.plan_length

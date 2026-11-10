@@ -11,6 +11,7 @@ import { Jimp } from 'jimp'
 const TEAM_POSITIONS_REFRESH_MS = 60 * 1000
 const ITEM_NOTE_CATEGORIES_REFRESH_MS = 5 * 60 * 1000
 const ITEM_NOTES_REFRESH_MS = 60 * 1000
+const PLAN_DETAILS_REFRESH_MS = 5 * 60 * 1000
 
 export default {
 	/* The Secret Key is kept in Companion's secrets store (older configs kept it in the normal config) */
@@ -454,6 +455,105 @@ export default {
 		}
 	},
 
+	/*
+	 * Loads the followed plan's name, dates and service times (once per plan, then every 5 minutes),
+	 * for the plan_name, plan_*dates and service time variables.
+	 */
+	getFollowedPlanDetails: function (serviceTypeId, planId) {
+		let self = this
+		if (!serviceTypeId || !planId) {
+			return
+		}
+		let cached = self.followedPlan
+		if (
+			cached &&
+			cached.id === `${planId}` &&
+			(cached.loading || Date.now() - cached.fetchedAt < PLAN_DETAILS_REFRESH_MS)
+		) {
+			return
+		}
+		if (!cached || cached.id !== `${planId}`) {
+			self.followedPlan = { id: `${planId}`, fetchedAt: 0, times: [] }
+			self.setFollowedPlanVariables()
+		}
+		self.followedPlan.loading = true
+
+		self
+			.doRest('GET', `${baseAPIUrl}/service_types/${serviceTypeId}/plans/${planId}?include=plan_times`, {})
+			.then(function (result) {
+				if (!self.followedPlan || self.followedPlan.id !== `${planId}`) {
+					return //the followed plan changed while this was loading
+				}
+				let attributes = result.data?.attributes || {}
+				let times = (result.included || [])
+					.filter((t) => t.type === 'PlanTime' && t.attributes?.time_type === 'service' && t.attributes?.starts_at)
+					.map((t) => ({ id: `${t.id}`, startsAt: new Date(t.attributes.starts_at), name: t.attributes.name || '' }))
+					.sort((a, b) => a.startsAt - b.startsAt)
+
+				self.followedPlan = {
+					id: `${planId}`,
+					fetchedAt: Date.now(),
+					loading: false,
+					name: attributes.title || attributes.series_title || '',
+					dates: attributes.dates || '',
+					shortDates: attributes.short_dates || attributes.dates || '',
+					times: times,
+				}
+				self.setFollowedPlanVariables()
+				self.updateCurrentServiceTime()
+			})
+			.catch(function (message) {
+				if (self.followedPlan && self.followedPlan.id === `${planId}`) {
+					self.followedPlan.loading = false
+					self.followedPlan.fetchedAt = Date.now() //try again in a few minutes, not on every poll
+				}
+				self.log('warn', 'Could not load the service times for the followed plan: ' + message)
+			})
+	},
+
+	formatServiceTime: function (date) {
+		return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+	},
+
+	setFollowedPlanVariables: function () {
+		let plan = this.followedPlan || { times: [] }
+		let vars = this.currentState.dynamicVariables
+		vars.plan_name = plan.name || ''
+		vars.plan_dates = plan.dates || ''
+		vars.plan_short_dates = plan.shortDates || ''
+		vars.plan_service_times = plan.times.map((t) => this.formatServiceTime(t.startsAt)).join(', ')
+		vars.plan_service_count = plan.times.length || ''
+	},
+
+	/*
+	 * Works out which service time is running: the one the current item belongs to in PCO Live, or else
+	 * the latest one that has started (the first one before any have started).
+	 */
+	updateCurrentServiceTime: function () {
+		let times = this.followedPlan?.times || []
+		let vars = this.currentState.dynamicVariables
+		let index = times.findIndex((t) => t.id === this.currentPlanTimeId)
+		if (index === -1 && times.length > 0) {
+			let now = Date.now()
+			index = 0
+			times.forEach((t, i) => {
+				if (t.startsAt.getTime() <= now) {
+					index = i
+				}
+			})
+		}
+		let time = times[index]
+		let changed =
+			vars.plan_current_service_number !== (time ? index + 1 : '') ||
+			vars.plan_current_service_time !== (time ? this.formatServiceTime(time.startsAt) : '')
+		vars.plan_current_service_time = time ? this.formatServiceTime(time.startsAt) : ''
+		vars.plan_current_service_name = time ? time.name || this.formatServiceTime(time.startsAt) : ''
+		vars.plan_current_service_number = time ? index + 1 : ''
+		if (changed) {
+			this.checkVariables()
+		}
+	},
+
 	processLiveData: function (result) {
 		let self = this
 
@@ -471,6 +571,13 @@ export default {
 					self.currentState.dynamicVariables['plan_title'] = result.data.attributes.title
 					self.currentState.dynamicVariables['plan_series'] = result.data.attributes.series_title
 				}
+
+				//which service time the current item belongs to (and the plan's name, dates and times)
+				let liveItemTimeId = result.data?.relationships?.current_item_time?.data?.id
+				let liveItemTime = (result.included || []).find((res) => res.type === 'ItemTime' && res.id === liveItemTimeId)
+				self.currentPlanTimeId = liveItemTime?.relationships?.plan_time?.data?.id || null
+				self.getFollowedPlanDetails(self.lastServiceTypeId, self.lastPlanId)
+				self.updateCurrentServiceTime()
 
 				let items = result.included
 

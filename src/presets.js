@@ -86,6 +86,25 @@ export default {
 		)
 		presets.currentitem_key = infoPreset('Current Item', 'Current Item Key', 'KEY', 'plan_currentitem_key')
 
+		/* The plan being followed and which service time is running (display only) */
+		const planCategory = 'Current Plan'
+		presets.current_plan = infoPreset(planCategory, 'Current Plan', 'PLAN', 'plan_name')
+		presets.current_service_time = infoPreset(
+			planCategory,
+			'Current Service Time',
+			'SERVICE',
+			'plan_current_service_time',
+		)
+		presets.current_plan_and_service = {
+			...infoPreset(planCategory, 'Current Plan and Service Time', '', 'plan_name'),
+			style: {
+				text: `${v('plan_short_dates')}\\n${v('plan_name')}\\n${v('plan_current_service_time')}`,
+				size: 'auto',
+				color: white,
+				bgcolor: black,
+			},
+		}
+
 		/* Buttons that move the plan being followed (the one taken with the Plan Picker) */
 		const controlCategory = 'Plan Control'
 		const goStep = (actionId) => [{ down: [{ actionId: actionId, options: {} }], up: [] }]
@@ -457,7 +476,7 @@ export default {
 	},
 }
 
-const SECTION_ORDER = ['Plan Picker', 'Plan Control', 'Current Item', 'Next Item', 'Scheduled People']
+const SECTION_ORDER = ['Plan Picker', 'Plan Control', 'Current Plan', 'Current Item', 'Next Item', 'Scheduled People']
 
 const slug = (str) =>
 	`${str}`

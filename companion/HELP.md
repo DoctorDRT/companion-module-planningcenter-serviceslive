@@ -33,14 +33,14 @@ The PCO person who owns the token is the person who "takes control" of plans, so
 
 The settings are grouped into sections, each with a heading.
 
-**Planning Center account**
+**Planning Center Account**
 
 | Setting        | What it does                                                                                        |
 | -------------- | --------------------------------------------------------------------------------------------------- |
 | Application ID | The Application ID from your token.                                                                 |
 | Secret Key     | The Secret from your token. It is kept in Companion's secrets store, so it stays hidden once saved. |
 
-**Which plans to show** (all optional)
+**Which Plans to Show** (all optional)
 
 | Setting                | What it does                                                                                                                                             |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -61,7 +61,7 @@ The settings are grouped into sections, each with a heading.
 | Service Type Slots (1-30)    | How many service types get their own slot. Default is 8.                                                                                                                                   |
 | Upcoming Plan Slots (1-10)   | How many upcoming plans load for the selected service type. Default is 4.                                                                                                                  |
 
-**Live updates (polling)**
+**Live Updates (Polling)**
 
 | Setting                     | What it does                                                                                                                                                          |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -189,23 +189,29 @@ Variables are written as `$(services-live:variable_name)`. If you renamed the co
 
 #### Plan being followed
 
-| Variable                                                                                                                         | Shows                                                     |
-| -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `org_name`                                                                                                                       | Your organization name                                    |
-| `plan_title`, `plan_series`                                                                                                      | Title and series of the plan                              |
-| `plan_index`, `plan_length`                                                                                                      | Current item number and total items                       |
-| `plan_currentitem`                                                                                                               | Current item title                                        |
-| `plan_currentitem_time_length`                                                                                                   | Current item length (`mm:ss`)                             |
-| `plan_currentitem_time_length_seconds`                                                                                           | Current item length in seconds                            |
-| `plan_currentitem_time_started`                                                                                                  | When the current item started                             |
-| `plan_currentitem_time_remaining`                                                                                                | Time left on the current item, counting down every second |
-| `plan_currentitem_time_remaining_seconds`                                                                                        | Time left in seconds (negative when over)                 |
-| `plan_currentitem_time_shouldfinish`                                                                                             | When the current item should finish                       |
-| `plan_currentitem_key`                                                                                                           | Key of the current item (songs)                           |
-| `plan_currentitem_description`                                                                                                   | Description of the current item                           |
-| `plan_currentitem_notes_<category>`                                                                                              | Item notes, one variable per note category                |
-| `plan_nextitem`, `plan_nextitem_time_length`, `plan_nextitem_key`, `plan_nextitem_description`, `plan_nextitem_notes_<category>` | The same, for the next item                               |
-| `last_servicetype_id`, `last_servicetype_name`, `last_plan_id`, `last_plan_name`                                                 | The last plan controlled                                  |
+| Variable                                                                                                                         | Shows                                                            |
+| -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `org_name`                                                                                                                       | Your organization name                                           |
+| `plan_title`, `plan_series`                                                                                                      | Title and series of the plan                                     |
+| `plan_name`                                                                                                                      | Plan title, or the series title when there is no title           |
+| `plan_dates`, `plan_short_dates`                                                                                                 | Plan dates, long and short                                       |
+| `plan_service_times`, `plan_service_count`                                                                                       | Every service time in the plan, and how many there are           |
+| `plan_current_service_time`                                                                                                      | The service time that is running, such as `11:00 AM`             |
+| `plan_current_service_name`                                                                                                      | That service time's name in PCO, or the time when it has no name |
+| `plan_current_service_number`                                                                                                    | Which service it is (1 = first service of the day)               |
+| `plan_index`, `plan_length`                                                                                                      | Current item number and total items                              |
+| `plan_currentitem`                                                                                                               | Current item title                                               |
+| `plan_currentitem_time_length`                                                                                                   | Current item length (`mm:ss`)                                    |
+| `plan_currentitem_time_length_seconds`                                                                                           | Current item length in seconds                                   |
+| `plan_currentitem_time_started`                                                                                                  | When the current item started                                    |
+| `plan_currentitem_time_remaining`                                                                                                | Time left on the current item, counting down every second        |
+| `plan_currentitem_time_remaining_seconds`                                                                                        | Time left in seconds (negative when over)                        |
+| `plan_currentitem_time_shouldfinish`                                                                                             | When the current item should finish                              |
+| `plan_currentitem_key`                                                                                                           | Key of the current item (songs)                                  |
+| `plan_currentitem_description`                                                                                                   | Description of the current item                                  |
+| `plan_currentitem_notes_<category>`                                                                                              | Item notes, one variable per note category                       |
+| `plan_nextitem`, `plan_nextitem_time_length`, `plan_nextitem_key`, `plan_nextitem_description`, `plan_nextitem_notes_<category>` | The same, for the next item                                      |
+| `last_servicetype_id`, `last_servicetype_name`, `last_plan_id`, `last_plan_name`                                                 | The last plan controlled                                         |
 
 #### Scheduled people
 
@@ -241,6 +247,7 @@ Presets are in the **Presets** tab under this connection:
 
 - **Plan Picker**, in groups: Specific Service Types (one button per service type), Folders (one Load button per folder), Service Type Slots, Upcoming Plans, and Control (Take/Release).
 - **Plan Control**: Go Next (shows the next item's name) and Previous. They move the plan being followed.
+- **Current Plan**: the plan being followed, the service time that is running ("Service 2 of 3"), and one with both. Display only.
 - **Current Item**: item number ("Item 3 of 12" with a progress bar), current item name, length, start time, time remaining, end time, key, and a countdown with a progress bar.
 - **Next Item**: next item name, length and key. Pressing the Next Item button also goes to the next item.
 - **Scheduled People**: for the plan being followed, one section for every scheduled position in order, plus one section per team.

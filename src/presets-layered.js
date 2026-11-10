@@ -603,6 +603,89 @@ export function getLayeredPresets(self) {
 		steps: steps([{ actionId: 'nextitem_followed', options: {} }]),
 	}
 
+	/* ---- Current Plan: the plan being followed and its service time (display only) ---- */
+	const servicePosition = expr(
+		`${v('plan_current_service_number')} ? concat('Service ', ${v('plan_current_service_number')}, ' of ', ${v('plan_service_count')}) : ''`,
+	)
+	presets.current_plan = {
+		type: 'layered',
+		category: 'Current Plan',
+		name: 'Current Plan',
+		keywords: ['plan', 'current', 'controlled', 'date'],
+		elements: [
+			background(),
+			text('label', 'Label', 'PLAN', { x: 4, y: 6, width: 92, height: 18 }, { color: COLORS.muted }),
+			text(
+				'name',
+				'Plan Name',
+				orElse('plan_name', 'No plan'),
+				{ x: 4, y: 26, width: 92, height: 48 },
+				{ color: colorWhenSet('plan_name'), weight: 'bold' },
+			),
+			text('date', 'Plan Date', v('plan_short_dates'), { x: 4, y: 76, width: 92, height: 18 }, { color: COLORS.muted }),
+		],
+		steps: steps([]),
+		feedbacks: [],
+	}
+	presets.current_service_time = {
+		type: 'layered',
+		category: 'Current Plan',
+		name: 'Current Service Time',
+		keywords: ['service', 'time', 'current', 'which service'],
+		elements: [
+			background(),
+			text('label', 'Label', 'SERVICE', { x: 4, y: 6, width: 92, height: 18 }, { color: COLORS.muted }),
+			text(
+				'time',
+				'Service Time',
+				orElse('plan_current_service_time', '--:--'),
+				{ x: 4, y: 26, width: 92, height: 48 },
+				{ color: colorWhenSet('plan_current_service_time', COLORS.amber), weight: 'bold' },
+			),
+			text(
+				'position',
+				'Service Number',
+				servicePosition,
+				{ x: 4, y: 76, width: 92, height: 18 },
+				{ color: COLORS.muted },
+			),
+		],
+		steps: steps([]),
+		feedbacks: [],
+	}
+	presets.current_plan_and_service = {
+		type: 'layered',
+		category: 'Current Plan',
+		name: 'Current Plan and Service Time',
+		keywords: ['plan', 'service', 'time', 'current'],
+		elements: [
+			background(),
+			text(
+				'date',
+				'Plan Date',
+				orElse('plan_short_dates', 'PLAN'),
+				{ x: 4, y: 5, width: 92, height: 18 },
+				{ color: COLORS.muted },
+			),
+			text(
+				'name',
+				'Plan Name',
+				orElse('plan_name', 'No plan'),
+				{ x: 4, y: 25, width: 92, height: 38 },
+				{ color: colorWhenSet('plan_name') },
+			),
+			text(
+				'time',
+				'Service Time',
+				orElse('plan_current_service_time', '--:--'),
+				{ x: 4, y: 66, width: 92, height: 29 },
+				{ color: colorWhenSet('plan_current_service_time', COLORS.amber), weight: 'bold' },
+			),
+		],
+		steps: steps([]),
+		feedbacks: [],
+	}
+
 	/* ---- Plan Control: move the plan being followed ---- */
 	presets.go_next = {
 		type: 'layered',
