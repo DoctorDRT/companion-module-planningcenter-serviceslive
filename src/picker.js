@@ -14,8 +14,7 @@ const PICKER_MAX_SERVICETYPE_SLOTS = 30
  * Lets an operator choose a service type, see the next few upcoming plans for it as variables,
  * pick one, and then take control of that plan. Flow on a Stream Deck:
  *   0. (optional) "Plan Picker: Load Service Types from Folder" fills picker_servicetype_N_name variables
- *   1. "Plan Picker: Select Service Type" (one button per service type slot) or
- *      "Plan Picker: Load Upcoming Plans" (a fixed service type per button)
+ *   1. "Plan Picker: Select Service Type" (one button per folder slot, or a specific service type per button)
  *   2. "Plan Picker: Select Plan" (one button per slot, text = $(services-live:picker_plan_1_name) etc.)
  *   3. "Plan Picker: Take Control of Selected Plan"
  */
