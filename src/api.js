@@ -766,8 +766,12 @@ module.exports = {
 				}
 				self.currentState.dynamicVariables['plan_currentitem_time_remaining_seconds'] = timeRemaining
 				self.currentState.dynamicVariables['plan_currentitem_time_remaining'] = timeRemaining_formatted
-				self.checkVariables()
-				self.checkFeedbacks()
+				//only the countdown changes every second, so only update those variables and the overrun feedback
+				self.setVariableValues({
+					plan_currentitem_time_remaining_seconds: timeRemaining,
+					plan_currentitem_time_remaining: timeRemaining_formatted,
+				})
+				self.checkFeedbacks('item_overrun')
 			} catch (error) {
 				//just silently fail to the terminal because it's just a variable update
 				console.log('Error updating plan item time remaining: ')

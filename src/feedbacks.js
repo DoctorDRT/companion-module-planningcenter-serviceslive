@@ -48,7 +48,8 @@ async function personPhoto(person, returnStatus, options) {
 				}
 			}
 		} catch (error) {
-			self.log('error', 'Error building feedback: ' + error)
+			//this helper runs outside the module instance, so there is no `self.log` here
+			console.log('Error building feedback: ' + error)
 			console.log(error)
 			console.log('person', person)
 		}
